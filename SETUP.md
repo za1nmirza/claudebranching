@@ -2,7 +2,19 @@
 
 ## Quick Start
 
-### 1. Start the Backend Server (Required for Claude API)
+### 1. Environment Setup
+```bash
+cd server
+cp .env.example .env
+```
+Edit `server/.env` and add your Anthropic API key:
+```
+CLAUDE_API_KEY=your_actual_api_key_here
+PORT=3001
+```
+Get your API key from: https://console.anthropic.com/
+
+### 2. Start the Backend Server (Required for Claude API)
 ```bash
 cd server
 npm install
@@ -10,14 +22,14 @@ npm start
 ```
 The backend will run on http://localhost:3001
 
-### 2. Start the Frontend (in a new terminal)
+### 3. Start the Frontend (in a new terminal)
 ```bash
 npm install
 npm run dev
 ```
 The frontend will run on http://localhost:5173
 
-### 3. Test the Integration
+### 4. Test the Integration
 1. Open http://localhost:5173
 2. Send a message and wait for Claude's response
 3. Click the "Branch" button to create a new conversation branch
