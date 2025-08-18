@@ -56,10 +56,11 @@ export function validateId(id, type) {
     return false;
   }
   
+  // More permissive patterns to handle legacy IDs
   const patterns = {
-    message: /^msg_\d+_[a-z0-9]{9}$/,
-    conversation: /^conv_\d+_[a-z0-9]{9}$/,
-    branch: /^branch_\d+_[a-z0-9]{9}$/
+    message: /^msg_/,  // Just check if it starts with msg_
+    conversation: /^conv_/, // Just check if it starts with conv_
+    branch: /^branch_/ // Just check if it starts with branch_
   };
   
   const pattern = patterns[type];

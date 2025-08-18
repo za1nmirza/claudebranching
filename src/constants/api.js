@@ -5,7 +5,7 @@ export const API_CONFIG = {
   // Claude API settings
   DEFAULT_MAX_TOKENS: 1000,
   BRANCH_NAME_MAX_TOKENS: 20,
-  BRANCH_NAME_MAX_LENGTH: 25,
+  BRANCH_NAME_MAX_LENGTH: 50,
   
   // Request limits
   MAX_MESSAGE_LENGTH: 4000,

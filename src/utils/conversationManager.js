@@ -197,7 +197,7 @@ export class ConversationManager {
     conversation.breadcrumbs = this.generateBreadcrumbs(branchId);
     console.log('🍞 Updated breadcrumbs:', conversation.breadcrumbs);
     
-    this.saveToStorage();
+    this._saveToStorage();
     
     return true;
   }
@@ -236,7 +236,7 @@ export class ConversationManager {
       this.switchToBranch(branch.parentBranchId || 'main');
     }
 
-    this.saveToStorage();
+    this._saveToStorage();
     return true;
   }
 

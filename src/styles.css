@@ -6,739 +6,323 @@
 }
 
 body {
-    font-family: 'Test Tiempos Text', 'Styrene B LC', -apple-system, BlinkMacSystemFont, sans-serif;
-    background-color: #2E2E2B;
-    color: white;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background-color: #f5f5f5;
+    color: #333;
     height: 100vh;
     overflow: hidden;
 }
 
-/* CSS Variables for Design System Colors */
+/* Simple CSS Variables */
 :root {
-    /* Brand Colors */
-    --color-orange: #D97757;
-    --color-purple: #9B87F5;
-    --color-blue: #207FDE;
-    
-    /* Neutral Colors */
-    --color-white: #FFFFFF;
-    --color-black: #000000;
-    
-    /* State Colors */
-    --color-focus: #61AAF2;
-    --color-error: #BF4D43;
-    
-    /* Anthropic Orange Variations */
-    --color-book-cloth: #CC785C;
-    --color-kraft: #D4A27F;
-    --color-manilla: #EBDBBC;
-    
-    /* Slate Colors */
-    --color-slate-dark: #191919;
-    --color-slate-medium: #262625;
-    --color-slate-light: #40403E;
-    
-    /* Cloud Colors */
-    --color-cloud-dark: #666663;
-    --color-cloud-medium: #91918D;
-    --color-cloud-light: #BFBFBA;
-    
-    /* Ivory Colors */
-    --color-ivory-dark: #E5E4DF;
-    --color-ivory-medium: #F0F0EB;
-    --color-ivory-light: #FAFAF7;
-    
-    /* Background Colors */
-    --bg-primary: #2E2E2B;
-    --bg-sidebar: #22211D;
-    --bg-search: #393937;
-    --bg-search-bottom: #282624;
-    --bg-card: #191919;
-    --bg-border: rgba(255, 255, 255, 0.08);
+    --bg-primary: #ffffff;
+    --bg-secondary: #f8f9fa;
+    --bg-tertiary: #e9ecef;
+    --text-primary: #333;
+    --text-secondary: #666;
+    --accent: #007bff;
+    --border: #dee2e6;
+    --hover: #f8f9fa;
+    --user-message: #007bff;
+    --assistant-message: #f8f9fa;
 }
 
 /* Main app layout */
 .app {
-    position: relative;
-    width: 1512px;
-    height: 861px;
+    height: 100vh;
+    background: var(--bg-secondary);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+}
+
+/* Chat container - centered */
+.chat-wrapper {
+    width: 100%;
+    max-width: 1000px;
+    height: 90vh;
     background: var(--bg-primary);
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     display: flex;
-}
-
-/* Navigation Sidebar */
-.nav-sidebar {
-    position: absolute;
-    width: 288px;
-    height: 861px;
-    left: 0px;
-    bottom: 0px;
-    background: var(--bg-sidebar);
-    border-right: 1px solid var(--bg-border);
-    display: flex;
-    flex-direction: column;
-}
-
-/* Navigation Header */
-.nav-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    position: absolute;
-    width: 264px;
-    height: 24px;
-    left: 12px;
-    top: 20px;
-}
-
-.claude-logo svg {
-    width: 68px;
-    height: 16px;
-}
-
-.close-panel-btn {
-    width: 24px;
-    height: 24px;
-    background: none;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.close-panel-btn:hover {
-    background-color: rgba(255, 255, 255, 0.1);
-}
-
-/* Navigation Items */
-.nav-items {
-    flex: 1;
-    padding: 0 6px;
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-}
-
-.nav-section {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-}
-
-.nav-section-header {
-    font-family: 'Styrene B LC', sans-serif;
-    font-size: 14px;
-    font-weight: 500;
-    color: #CECCC5;
-    padding: 0 7px;
-    margin-bottom: 6px;
-}
-
-.nav-item {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 6px;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: background-color 0.2s ease;
-}
-
-.nav-item:hover {
-    background-color: rgba(255, 255, 255, 0.05);
-}
-
-.nav-item.active {
-    background-color: #191919;
-}
-
-.nav-item svg {
-    flex-shrink: 0;
-}
-
-.nav-item span {
-    font-family: 'Styrene B LC', sans-serif;
-    font-size: 15px;
-    font-weight: 400;
-    color: #BFBFBA;
-    flex: 1;
-    white-space: nowrap;
     overflow: hidden;
-    text-overflow: ellipsis;
 }
 
-.nav-item.active span {
-    color: #D97757;
-}
-
-.nav-list {
+/* Sidebar */
+.sidebar {
+    width: 280px;
+    background: var(--bg-secondary);
+    border-right: 1px solid var(--border);
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    padding: 20px;
 }
 
-.nav-list .nav-item span {
-    font-family: 'Test Tiempos Text', serif;
-    font-size: 13px;
-    text-transform: capitalize;
+.sidebar h2 {
+    margin-bottom: 20px;
+    font-size: 18px;
+    color: var(--text-primary);
+    font-weight: 600;
 }
 
-.view-all-link {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    padding: 0 7px;
-    margin-top: 8px;
-    cursor: pointer;
-}
-
-.view-all-link span {
-    font-family: 'Styrene B LC', sans-serif;
-    font-size: 14px;
-    color: rgba(255, 255, 255, 0.6);
-}
-
-/* User Profile */
-.user-profile {
-    position: absolute;
-    bottom: 36px;
-    left: 12px;
-    right: 12px;
-}
-
-.plan-badge {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    padding: 4px 12px;
-    background: linear-gradient(0deg, rgba(155, 135, 245, 0.08) 0%, rgba(90, 79, 143, 0.08) 100%);
-    border: 1px solid rgba(155, 135, 245, 0.08);
-    border-radius: 6px 6px 0 0;
-}
-
-.plan-badge span {
-    font-family: 'Test Tiempos Text', serif;
-    font-size: 12px;
-    letter-spacing: -0.4px;
-    color: #9B87F5;
-}
-
-.profile-info {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 8px 12px;
-    background-color: #191919;
-    border: 1px solid #34332C;
-    border-radius: 0 0 10px 10px;
-    gap: 15px;
-}
-
-.profile-content {
-    display: flex;
-    align-items: center;
-    gap: 6px;
+/* Chat area */
+.chat-container {
     flex: 1;
-    min-width: 0;
-}
-
-.profile-avatar {
-    width: 28px;
-    height: 28px;
-    background-color: #6C5BB9;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-family: 'Styrene B LC', sans-serif;
-    font-size: 12px;
-    font-weight: 700;
-    color: white;
-}
-
-.profile-email {
-    font-family: 'Styrene B LC', sans-serif;
-    font-size: 13px;
-    color: #CECCC5;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-/* Navigation Footer */
-.nav-footer {
-    position: absolute;
-    bottom: 12px;
-    left: 12px;
-    right: 12px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.help-support {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    cursor: pointer;
-}
-
-.help-support span {
-    font-family: 'Styrene B LC', sans-serif;
-    font-size: 12px;
-    color: rgba(255, 255, 255, 0.6);
-}
-
-/* Main Content */
-.main-content {
-    position: absolute;
-    width: 1224px;
-    height: 861px;
-    left: 288px;
-    top: 0px;
-}
-
-.content-container {
     display: flex;
     flex-direction: column;
-    align-items: center;
-    padding: 0px;
-    gap: 48px;
-    position: absolute;
-    width: 672px;
-    height: 690px;
-    left: calc(50% - 672px/2);
-    top: 48px;
-}
-
-/* Plan Chip */
-.plan-chip {
-    box-sizing: border-box;
-    display: flex;
-    flex-direction: row;
-    justify-content: center;
-    align-items: center;
-    padding: 8px 12px;
-    gap: 8px;
-    width: 133px;
-    height: 36px;
-    background: linear-gradient(180deg, rgba(155, 135, 245, 0.08) 0%, rgba(90, 79, 143, 0.08) 100%);
-    border: 1px solid rgba(155, 135, 245, 0.08);
-    border-radius: 24px;
-    flex: none;
-    order: 0;
-    flex-grow: 0;
-}
-
-.plan-chip span {
-    width: 109px;
-    height: 20px;
-    font-family: 'Test Tiempos Text';
-    font-style: normal;
-    font-weight: 400;
-    font-size: 15px;
-    line-height: 20px;
-    display: flex;
-    align-items: center;
-    letter-spacing: -0.8px;
-    color: var(--color-purple);
-    flex: none;
-    order: 0;
-    flex-grow: 0;
-}
-
-/* Headline */
-.headline {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    padding: 0px;
-    gap: 17px;
-    width: 485px;
-    height: 32px;
-    flex: none;
-    order: 1;
-    flex-grow: 0;
-}
-
-.headline svg {
-    width: 32px;
-    height: 32px;
-    flex: none;
-    order: 0;
-    flex-grow: 0;
-}
-
-.headline h1 {
-    width: 436px;
-    height: 31px;
-    font-family: 'Test Tiempos Text';
-    font-style: normal;
-    font-weight: 400;
-    font-size: 44px;
-    line-height: 58px;
-    leading-trim: both;
-    text-edge: cap;
-    display: flex;
-    align-items: center;
-    letter-spacing: -1px;
-    color: var(--color-white);
-    flex: none;
-    order: 1;
-    flex-grow: 0;
-    margin: 0;
-}
-
-/* Search Container */
-.search-container {
-    width: 672px;
-    height: 179px;
-    flex: none;
-    order: 2;
-    align-self: stretch;
-    flex-grow: 0;
-}
-
-.search-box {
-    box-sizing: border-box;
-    position: absolute;
-    height: 131px;
-    left: 0px;
-    right: 0px;
-    top: 0px;
-    background: var(--bg-search);
-    border: 1px solid #52514A;
-    border-radius: 16px;
-}
-
-.search-input {
-    position: absolute;
-    width: 237px;
-    height: 20px;
-    left: 17px;
-    top: 16px;
-}
-
-.search-placeholder {
-    font-family: 'Styrene B LC';
-    font-style: normal;
-    font-weight: 400;
-    font-size: 15px;
-    line-height: 20px;
-    display: flex;
-    align-items: center;
-    color: rgba(255, 255, 255, 0.6);
-}
-
-.search-bottom {
-    box-sizing: border-box;
-    display: flex;
-    flex-direction: row;
-    justify-content: space-between;
-    align-items: center;
-    padding: 12px 10px 12px 19px;
-    gap: 495px;
-    position: absolute;
-    height: 52px;
-    left: 8px;
-    right: 8px;
-    top: 129px;
-    background: var(--bg-search-bottom);
-    border: 1px solid #393831;
-    border-radius: 0px 0px 16px 16px;
-}
-
-.attach-btn {
-    width: 24px;
-    height: 24px;
-    background: none;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.attach-btn:hover {
-    background-color: rgba(255, 255, 255, 0.1);
-}
-
-.model-controls {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-}
-
-.model-selector, .project-selector {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    padding: 4px 4px 4px 8px;
-    background: none;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: background-color 0.2s ease;
-}
-
-.project-selector {
-    border: 1px solid #373632;
-    opacity: 0.6;
-}
-
-.model-selector:hover, .project-selector:hover {
-    background-color: rgba(255, 255, 255, 0.05);
-}
-
-.model-selector span, .project-selector span {
-    font-family: 'Test Tiempos Text', serif;
-    font-size: 13px;
-    font-weight: 500;
-    color: rgba(255, 255, 255, 0.6);
-}
-
-.project-selector span {
-    font-family: 'Styrene B LC', sans-serif;
-    font-size: 11px;
-    font-weight: 400;
-}
-
-/* Recent Chats */
-.recent-chats {
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    gap: 13px;
-}
-
-.recent-chats-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.header-left {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.header-left span {
-    font-family: 'Styrene B LC', sans-serif;
-    font-size: 13px;
-    font-weight: 500;
-    color: rgba(255, 255, 255, 0.6);
-}
-
-.view-all {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    cursor: pointer;
-}
-
-.view-all span {
-    font-family: 'Styrene B LC', sans-serif;
-    font-size: 14px;
-    color: rgba(255, 255, 255, 0.6);
-}
-
-/* Chat Grid */
-.chat-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 29px 10px;
-    width: 100%;
-}
-
-.chat-card {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    padding: 15px 16px 15px 10px;
-    border: 1px solid rgba(255, 255, 255, 0.05);
-    border-radius: 14px;
-    cursor: pointer;
-    transition: border-color 0.2s ease;
-}
-
-.chat-card:hover {
-    border-color: rgba(255, 255, 255, 0.1);
+    background: var(--bg-primary);
 }
 
 .chat-header {
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-primary);
+}
+
+.breadcrumb {
     display: flex;
     align-items: center;
-    gap: 12px;
-    height: 20px;
+    gap: 8px;
+    font-size: 14px;
+    color: var(--text-secondary);
 }
 
-.project-label {
-    display: flex;
-    align-items: center;
-    gap: 2px;
-    padding: 3px 6px;
-    background: #262625;
-    border-radius: 6px;
+.breadcrumb-item {
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: background-color 0.2s;
 }
 
-.project-label span {
-    font-family: 'Test Tiempos Text', serif;
-    font-size: 11px;
-    color: white;
-    opacity: 0.8;
+.breadcrumb-item:hover {
+    background: var(--hover);
+    color: var(--text-primary);
 }
 
-.chat-title {
-    font-family: 'Test Tiempos Text', serif;
-    font-size: 16px;
-    line-height: 21px;
-    color: white;
-    text-transform: capitalize;
+.breadcrumb-separator {
+    color: var(--text-secondary);
+    font-weight: 300;
+}
+
+/* Messages */
+.messages {
     flex: 1;
-}
-
-.chat-time {
-    font-family: 'Styrene B LC', sans-serif;
-    font-size: 11px;
-    color: rgba(255, 255, 255, 0.6);
-}
-
-/* Chat Messages */
-.chat-messages {
-    position: absolute;
-    top: 200px;
-    left: 50px;
-    right: 50px;
-    bottom: 100px;
-    background: rgba(0, 0, 0, 0.8);
-    border-radius: 16px;
-    padding: 20px;
-    overflow: auto;
+    padding: 24px;
+    overflow-y: auto;
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 20px;
 }
 
-.message-bubble {
+.message {
     display: flex;
-    margin-bottom: 16px;
+    align-items: flex-start;
+    gap: 12px;
 }
 
-.message-bubble.user {
-    justify-content: flex-end;
-}
-
-.message-bubble.assistant {
-    justify-content: flex-start;
+.message.user {
+    flex-direction: row-reverse;
 }
 
 .message-content {
-    max-width: 70%;
+    background: var(--assistant-message);
     padding: 12px 16px;
     border-radius: 12px;
-    white-space: pre-wrap;
-    word-break: break-word;
+    max-width: 70%;
+    word-wrap: break-word;
+    line-height: 1.5;
+    border: 1px solid var(--border);
 }
 
-.message-bubble.user .message-content {
-    background-color: var(--color-orange);
+.message.user .message-content {
+    background: var(--user-message);
     color: white;
+    border-color: var(--user-message);
 }
 
-.message-bubble.assistant .message-content {
-    background-color: var(--color-slate-light);
-    color: white;
-    border: 1px solid var(--color-cloud-dark);
-}
-
-/* Navigation Items Positioning */
-.nav-items {
+.message-actions {
     display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    padding: 0px;
-    gap: 20px;
-    position: absolute;
-    width: 276px;
-    height: 499px;
-    left: 6px;
-    top: 64px;
+    gap: 8px;
+    margin-top: 8px;
+    align-items: center;
 }
 
-.nav-section:first-child {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    padding: 0px;
-    gap: 2px;
-    width: 276px;
-    height: 66px;
-    flex: none;
-    order: 0;
-    align-self: stretch;
-    flex-grow: 0;
-}
-
-.nav-item.active {
-    background: var(--color-slate-dark);
+.branch-btn {
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    padding: 6px 12px;
     border-radius: 6px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
 }
 
-.nav-item.active span {
-    color: var(--color-orange);
+.branch-btn:hover {
+    background: var(--accent);
+    color: white;
+    border-color: var(--accent);
 }
 
-/* Interactive States */
-button:focus-visible,
-.nav-item:focus-visible,
-.chat-card:focus-visible {
-    outline: 2px solid var(--color-focus);
-    outline-offset: 2px;
+/* Input area */
+.input-area {
+    padding: 24px;
+    border-top: 1px solid var(--border);
+    background: var(--bg-primary);
 }
 
-/* Button Styles */
+.input-form {
+    display: flex;
+    gap: 12px;
+    align-items: flex-end;
+}
+
+.input-field {
+    flex: 1;
+    background: var(--bg-secondary);
+    border: 2px solid var(--border);
+    color: var(--text-primary);
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 14px;
+    resize: none;
+    min-height: 44px;
+    max-height: 120px;
+    line-height: 1.4;
+}
+
+.input-field:focus {
+    outline: none;
+    border-color: var(--accent);
+    background: white;
+}
+
+.send-btn {
+    background: var(--accent);
+    border: none;
+    color: white;
+    padding: 12px 24px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: background-color 0.2s;
+    height: 44px;
+}
+
+.send-btn:hover:not(:disabled) {
+    background: #0056b3;
+}
+
+.send-btn:disabled {
+    background: var(--bg-tertiary);
+    color: var(--text-secondary);
+    cursor: not-allowed;
+}
+
+/* Branch tree */
+.branch-tree {
+    margin-top: 16px;
+}
+
+.branch-section {
+    margin-bottom: 16px;
+}
+
+.branch-section h3 {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+    font-weight: 500;
+}
+
+.branch-item {
+    padding: 10px 12px;
+    cursor: pointer;
+    border-radius: 6px;
+    margin: 2px 0;
+    font-size: 14px;
+    transition: all 0.2s;
+    border: 1px solid transparent;
+}
+
+.branch-item:hover {
+    background: var(--hover);
+    border-color: var(--border);
+}
+
+.branch-item.active {
+    background: var(--accent);
+    color: white;
+    border-color: var(--accent);
+}
+
+.branch-item.closed {
+    opacity: 0.5;
+    text-decoration: line-through;
+}
+
+/* Buttons */
 button {
     cursor: pointer;
-    transition: all 0.2s ease;
+    font-family: inherit;
 }
 
-button:hover {
-    opacity: 0.8;
+/* Loading indicator */
+.loading {
+    color: var(--text-secondary);
+    font-style: italic;
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
-button:disabled {
-    cursor: not-allowed;
-    opacity: 0.5;
+.loading::after {
+    content: "...";
+    animation: dots 1.5s infinite;
 }
 
-/* Input Styling */
-input {
-    font-family: 'Styrene B LC';
+@keyframes dots {
+    0%, 20% { opacity: 0; }
+    50% { opacity: 1; }
+    100% { opacity: 0; }
 }
 
-input::placeholder {
-    color: rgba(255, 255, 255, 0.6);
+/* Scrollbar styling */
+.messages::-webkit-scrollbar {
+    width: 6px;
 }
 
-/* Scrollbar Styling */
-.chat-messages::-webkit-scrollbar {
-    width: 8px;
+.messages::-webkit-scrollbar-track {
+    background: var(--bg-secondary);
 }
 
-.chat-messages::-webkit-scrollbar-track {
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 4px;
+.messages::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 3px;
 }
 
-.chat-messages::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.3);
-    border-radius: 4px;
+.messages::-webkit-scrollbar-thumb:hover {
+    background: var(--text-secondary);
 }
 
-.chat-messages::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.5);
+/* Empty state */
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: var(--text-secondary);
+    text-align: center;
+}
+
+.empty-state h3 {
+    margin-bottom: 8px;
+    color: var(--text-primary);
+}
+
+.empty-state p {
+    font-size: 14px;
 }
