@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Claude Chat Interface</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=Fira+Code:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap');
+      @font-face {
+        font-family: 'Test Tiempos Text';
+        src: url('https://use.typekit.net/af/cb695f/00000000000000000001001f/27/l?primer=7cdcb44be4a7db8877ffa5c0007b8dd865b3bbc383831fe2ea177f62257a9191&fvd=n4&v=3') format('woff2');
+        font-weight: 400;
+        font-style: normal;
+      }
+      @font-face {
+        font-family: 'Test Tiempos Text';
+        src: url('https://use.typekit.net/af/cb695f/00000000000000000001001f/27/l?primer=7cdcb44be4a7db8877ffa5c0007b8dd865b3bbc383831fe2ea177f62257a9191&fvd=n5&v=3') format('woff2');
+        font-weight: 500;
+        font-style: normal;
+      }
+      @font-face {
+        font-family: 'Styrene B LC';
+        src: url('https://use.typekit.net/af/47b3d8/00000000000000000001277a/27/l?primer=7cdcb44be4a7db8877ffa5c0007b8dd865b3bbc383831fe2ea177f62257a9191&fvd=n4&v=3') format('woff2');
+        font-weight: 400;
+        font-style: normal;
+      }
+      @font-face {
+        font-family: 'Styrene B LC';
+        src: url('https://use.typekit.net/af/47b3d8/00000000000000000001277a/27/l?primer=7cdcb44be4a7db8877ffa5c0007b8dd865b3bbc383831fe2ea177f62257a9191&fvd=n5&v=3') format('woff2');
+        font-weight: 500;
+        font-style: normal;
+      }
+    </style>
+    <link rel="stylesheet" href="src/styles.css">
+</head>
+<body>
+    <div class="app">
+        <!-- Navigation Sidebar -->
+        <nav class="nav-sidebar">
+            <!-- Logo Header -->
+            <div class="nav-header">
+                <div class="claude-logo">
+                    <svg width="68" height="16" viewBox="0 0 68 16" fill="none">
+                        <path d="M0 16V0h4.8v12.8h8V16H0zm20.4 0V9.6c0-2.4-1.2-3.6-3.6-3.6s-3.6 1.2-3.6 3.6V16h-4.8V4.8h4.8v1.2c1.2-1.2 2.8-1.6 4.8-1.6 4 0 7.2 2.4 7.2 7.2V16h-4.8zm16.8 0.4c-4.4 0-8-3.2-8-8s3.6-8 8-8 8 3.2 8 8-3.6 8-8 8zm0-12c-2.4 0-3.6 1.6-3.6 4s1.2 4 3.6 4 3.6-1.6 3.6-4-1.2-4-3.6-4zm19.2 11.6V4.8h4.8v1.2c1.2-1.2 2.8-1.6 4.8-1.6v4.4c-0.4 0-0.8 0-1.2 0-2.4 0-3.6 0.8-3.6 3.2V16h-4.8z" fill="white"/>
+                    </svg>
+                </div>
+                <button class="close-panel-btn">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                        <path d="M12 4L4 12M4 4L12 12" stroke="rgba(255,255,255,0.6)" stroke-width="1.5" stroke-linecap="round"/>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Navigation Items -->
+            <div class="nav-items">
+                <!-- Top Navigation -->
+                <div class="nav-section">
+                    <div class="nav-item active">
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                            <path d="M8 2L14 8H10V14H6V8H2L8 2Z" fill="#D97757"/>
+                        </svg>
+                        <span>Start new chat</span>
+                    </div>
+                    <div class="nav-item">
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                            <path d="M2 4H14V12H2V4Z" stroke="#BFBFBA" stroke-width="1.5"/>
+                        </svg>
+                        <span>Projects</span>
+                    </div>
+                </div>
+
+                <!-- Starred Section -->
+                <div class="nav-section">
+                    <div class="nav-section-header">Starred</div>
+                    <div class="nav-list">
+                        <div class="nav-item">
+                            <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
+                                <path d="M2 4H13V11H2V4Z" stroke="#BFBFBA" stroke-width="1.5"/>
+                            </svg>
+                            <span>Project conversation</span>
+                        </div>
+                        <div class="nav-item">
+                            <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
+                                <path d="M2 4H13V11H2V4Z" stroke="#BFBFBA" stroke-width="1.5"/>
+                            </svg>
+                            <span>Project conversation</span>
+                        </div>
+                        <div class="nav-item">
+                            <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
+                                <path d="M2 4H13V11H2V4Z" stroke="#BFBFBA" stroke-width="1.5"/>
+                            </svg>
+                            <span>Project conversation</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recents Section -->
+                <div class="nav-section">
+                    <div class="nav-section-header">Recents</div>
+                    <div class="nav-list">
+                        <div class="nav-item">
+                            <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
+                                <path d="M2 3H13V12H2V3Z" stroke="#FFFFFF" stroke-width="1.5"/>
+                            </svg>
+                            <span>Recent conversation</span>
+                        </div>
+                        <div class="nav-item">
+                            <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
+                                <path d="M2 3H13V12H2V3Z" stroke="#FFFFFF" stroke-width="1.5"/>
+                            </svg>
+                            <span>Recent conversation</span>
+                        </div>
+                        <div class="nav-item">
+                            <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
+                                <path d="M2 3H13V12H2V3Z" stroke="#FFFFFF" stroke-width="1.5"/>
+                            </svg>
+                            <span>Recent conversation</span>
+                        </div>
+                        <div class="nav-item">
+                            <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
+                                <path d="M2 3H13V12H2V3Z" stroke="#FFFFFF" stroke-width="1.5"/>
+                            </svg>
+                            <span>Recent conversation</span>
+                        </div>
+                        <div class="nav-item">
+                            <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
+                                <path d="M2 3H13V12H2V3Z" stroke="#FFFFFF" stroke-width="1.5"/>
+                            </svg>
+                            <span>Recent conversation</span>
+                        </div>
+                        <div class="nav-item">
+                            <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
+                                <path d="M2 3H13V12H2V3Z" stroke="#FFFFFF" stroke-width="1.5"/>
+                            </svg>
+                            <span>Recent conversation</span>
+                        </div>
+                        <div class="nav-item">
+                            <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
+                                <path d="M2 3H13V12H2V3Z" stroke="#FFFFFF" stroke-width="1.5"/>
+                            </svg>
+                            <span>Recent conversation</span>
+                        </div>
+                        <div class="nav-item">
+                            <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
+                                <path d="M2 3H13V12H2V3Z" stroke="#FFFFFF" stroke-width="1.5"/>
+                            </svg>
+                            <span>Recent conversation</span>
+                        </div>
+                    </div>
+                    <div class="view-all-link">
+                        <span>All Projects</span>
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                            <path d="M6 4L10 8L6 12" stroke="#BFBFBA" stroke-width="1.5" stroke-linecap="round"/>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+
+            <!-- User Profile -->
+            <div class="user-profile">
+                <div class="plan-badge">
+                    <span>Professional plan</span>
+                </div>
+                <div class="profile-info">
+                    <div class="profile-content">
+                        <div class="profile-avatar">PM</div>
+                        <span class="profile-email">patrick@patrickmorgan.org</span>
+                    </div>
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                        <path d="M4 6L8 10L12 6" stroke="rgba(255,255,255,0.6)" stroke-width="1.5" stroke-linecap="round"/>
+                    </svg>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="nav-footer">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                    <path d="M8 15C11.866 15 15 11.866 15 8C15 4.134 11.866 1 8 1C4.134 1 1 4.134 1 8C1 11.866 4.134 15 8 15Z" stroke="rgba(255,255,255,0.6)" stroke-width="1.5"/>
+                </svg>
+                <div class="help-support">
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                        <path d="M7 13C10.314 13 13 10.314 13 7C13 3.686 10.314 1 7 1C3.686 1 1 3.686 1 7C1 10.314 3.686 13 7 13Z" stroke="rgba(255,255,255,0.6)" stroke-width="1.5"/>
+                        <path d="M5.5 5.25C5.5 4.284 6.284 3.5 7.25 3.5C8.216 3.5 9 4.284 9 5.25C9 6.216 8.216 7 7.25 7H7V8.5" stroke="rgba(255,255,255,0.6)" stroke-width="1.5" stroke-linecap="round"/>
+                        <circle cx="7" cy="10.5" r="0.5" fill="rgba(255,255,255,0.6)"/>
+                    </svg>
+                    <span>Help & support</span>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="content-container">
+                <!-- Plan Badge -->
+                <div class="plan-chip">
+                    <span>Professional Plan</span>
+                </div>
+
+                <!-- Headline -->
+                <div class="headline">
+                    <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+                        <path d="M16 4L28 16L24 20L20 16V28H12V16L8 20L4 16L16 4Z" fill="#D97757"/>
+                    </svg>
+                    <h1>Good evening, Patrick</h1>
+                </div>
+
+                <!-- Search Interface -->
+                <div class="search-container">
+                    <div class="search-box">
+                        <div class="search-input">
+                            <span class="search-placeholder">How can Claude help you today?</span>
+                        </div>
+                        <div class="search-bottom">
+                            <button class="attach-btn">
+                                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                                    <path d="M8 2L14 8L8 14L2 8L8 2Z" stroke="rgba(255,255,255,0.6)" stroke-width="1.5"/>
+                                </svg>
+                            </button>
+                            
+                            <div class="model-controls">
+                                <button class="model-selector">
+                                    <span>3.5 Sonnet</span>
+                                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                                        <path d="M4 6L8 10L12 6" stroke="rgba(255,255,255,0.6)" stroke-width="1.5" stroke-linecap="round"/>
+                                    </svg>
+                                </button>
+                                
+                                <button class="project-selector">
+                                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                                        <path d="M2 3H10V9H2V3Z" stroke="rgba(255,255,255,0.6)" stroke-width="1"/>
+                                    </svg>
+                                    <span>Use a project</span>
+                                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                                        <path d="M4 6L8 10L12 6" stroke="rgba(255,255,255,0.6)" stroke-width="1.5" stroke-linecap="round"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Chats -->
+                <div class="recent-chats">
+                    <div class="recent-chats-header">
+                        <div class="header-left">
+                            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                                <path d="M2 4H18V16H2V4Z" stroke="#207FDE" stroke-width="1.5"/>
+                            </svg>
+                            <span>Your recent chats</span>
+                            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                                <path d="M12 6L8 2L4 6" stroke="rgba(255,255,255,0.6)" stroke-width="1.5" stroke-linecap="round"/>
+                            </svg>
+                        </div>
+                        <div class="view-all">
+                            <span>View all</span>
+                            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                                <path d="M6 4L10 8L6 12" stroke="rgba(255,255,255,0.6)" stroke-width="1.5" stroke-linecap="round"/>
+                            </svg>
+                        </div>
+                    </div>
+                    
+                    <div class="chat-grid">
+                        <div class="chat-card">
+                            <div class="chat-header">
+                                <div class="project-label">
+                                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                                        <path d="M2 3H10V9H2V3Z" stroke="rgba(255,255,255,0.6)" stroke-width="1"/>
+                                    </svg>
+                                    <span>How to use Claude</span>
+                                </div>
+                            </div>
+                            <div class="chat-title">Strategies for Maximizing Interaction</div>
+                            <div class="chat-time">3 hours ago</div>
+                        </div>
+                        
+                        <div class="chat-card">
+                            <div class="chat-header">
+                                <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                                    <path d="M2 4H18V16H2V4Z" stroke="rgba(255,255,255,0.6)" stroke-width="1.5"/>
+                                </svg>
+                            </div>
+                            <div class="chat-title">Strategies for Maximizing Interaction</div>
+                            <div class="chat-time">3 hours ago</div>
+                        </div>
+                        
+                        <div class="chat-card">
+                            <div class="chat-header">
+                                <div class="project-label">
+                                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                                        <path d="M2 3H10V9H2V3Z" stroke="rgba(255,255,255,0.6)" stroke-width="1"/>
+                                    </svg>
+                                    <span>How to use Claude</span>
+                                </div>
+                            </div>
+                            <div class="chat-title">Strategies for Maximizing Interaction</div>
+                            <div class="chat-time">3 hours ago</div>
+                        </div>
+                        
+                        <div class="chat-card">
+                            <div class="chat-header">
+                                <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                                    <path d="M2 4H18V16H2V4Z" stroke="rgba(255,255,255,0.6)" stroke-width="1.5"/>
+                                </svg>
+                            </div>
+                            <div class="chat-title">Strategies for Maximizing Interaction</div>
+                            <div class="chat-time">3 hours ago</div>
+                        </div>
+                        
+                        <div class="chat-card">
+                            <div class="chat-header">
+                                <div class="project-label">
+                                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                                        <path d="M2 3H10V9H2V3Z" stroke="rgba(255,255,255,0.6)" stroke-width="1"/>
+                                    </svg>
+                                    <span>How to use Claude</span>
+                                </div>
+                            </div>
+                            <div class="chat-title">Strategies for Maximizing Interaction</div>
+                            <div class="chat-time">3 hours ago</div>
+                        </div>
+                        
+                        <div class="chat-card">
+                            <div class="chat-header">
+                                <div class="project-label">
+                                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                                        <path d="M2 3H10V9H2V3Z" stroke="rgba(255,255,255,0.6)" stroke-width="1"/>
+                                    </svg>
+                                    <span>How to use Claude</span>
+                                </div>
+                            </div>
+                            <div class="chat-title">Strategies for Maximizing Interaction</div>
+                            <div class="chat-time">3 hours ago</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</body>
+</html>
