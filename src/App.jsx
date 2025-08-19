@@ -12,6 +12,11 @@ function App() {
   const [conversationUpdate, setConversationUpdate] = useState(0);
 
   useEffect(() => {
+    // Check URL parameters for specific branch/conversation
+    const urlParams = new URLSearchParams(window.location.search);
+    const branchId = urlParams.get('branch');
+    const conversationId = urlParams.get('conversation');
+    
     // Try to load existing conversation or create new one
     const loaded = conversationManager.loadFromStorage();
     if (!loaded) {
@@ -21,10 +26,25 @@ function App() {
       setCurrentConversation(conversationManager.getCurrentConversation());
     }
     
-    // Load current branch messages
-    const currentBranch = conversationManager.getCurrentBranch();
-    if (currentBranch) {
-      setMessages(currentBranch.messages);
+    // If URL parameters specify a specific branch/conversation, switch to it
+    if (conversationId && branchId) {
+      try {
+        conversationManager.currentConversationId = conversationId;
+        conversationManager.currentBranch = branchId;
+        const currentBranch = conversationManager.getCurrentBranch();
+        if (currentBranch) {
+          setMessages(currentBranch.messages);
+          setCurrentConversation(conversationManager.getCurrentConversation());
+        }
+      } catch (error) {
+        console.error('Error loading specific branch from URL:', error);
+      }
+    } else {
+      // Load current branch messages
+      const currentBranch = conversationManager.getCurrentBranch();
+      if (currentBranch) {
+        setMessages(currentBranch.messages);
+      }
     }
   }, []);
 

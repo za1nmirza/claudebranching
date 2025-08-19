@@ -76,16 +76,28 @@ app.post('/api/chat', async (req, res) => {
 // Branch name generation endpoint
 app.post('/api/generate-branch-name', async (req, res) => {
   try {
-    const { lastUserMessage, lastAssistantMessage } = req.body;
+    const { lastUserMessage, lastAssistantMessage, selectedText } = req.body;
 
     if (!lastUserMessage || !lastAssistantMessage) {
       return res.status(400).json({ error: 'Both user and assistant messages are required' });
     }
 
-    const nameGenerationPrompt = `Based on this conversation exchange, generate a short, descriptive branch name (2-4 words max) for a conversation branch:
+    let nameGenerationPrompt = `Based on this conversation exchange, generate a short, descriptive branch name (2-4 words max) for a conversation branch:
 
 User: "${lastUserMessage}"
-Assistant: "${lastAssistantMessage}"
+Assistant: "${lastAssistantMessage}"`;
+
+    // If the user selected specific text, include it in the prompt for better context
+    if (selectedText && selectedText.trim()) {
+      nameGenerationPrompt += `
+
+The user has specifically selected this part of the assistant's response to branch from:
+"${selectedText.trim()}"
+
+Focus the branch name on this selected portion and its topic.`;
+    }
+
+    nameGenerationPrompt += `
 
 Generate a concise branch name that captures the specific topic or direction of this conversation thread. Examples: "Deep Dive", "Alternative Approach", "Practical Examples", "Technical Details", etc.
 
@@ -144,6 +156,64 @@ function getDefaultBranchName() {
   ];
   return defaultNames[Math.floor(Math.random() * defaultNames.length)];
 }
+
+// Conversation name generation endpoint
+app.post('/api/generate-conversation-name', async (req, res) => {
+  try {
+    const { conversationContext } = req.body;
+
+    if (!conversationContext) {
+      return res.status(400).json({ error: 'Conversation context is required' });
+    }
+
+    const nameGenerationPrompt = `Based on this conversation exchange, generate a short, descriptive conversation title (2-4 words max):
+
+${conversationContext}
+
+Generate a concise title that captures the main topic or purpose of this conversation. Examples: "React Help", "API Design", "Bug Fix Discussion", "Learning Python", etc.
+
+Respond with only the conversation title, no additional text.`;
+
+    console.log('Generating conversation name...');
+
+    const response = await axios.post(CLAUDE_API_URL, {
+      model: 'claude-3-haiku-20240307',
+      max_tokens: 20,
+      messages: [{ role: 'user', content: nameGenerationPrompt }]
+    }, {
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': CLAUDE_API_KEY,
+        'anthropic-version': '2023-06-01'
+      }
+    });
+
+    let conversationName = response.data.content[0].text.trim();
+    
+    // Clean up the response - remove quotes and ensure reasonable length
+    conversationName = conversationName.replace(/['\"]/g, '');
+    if (conversationName.length > 30) {
+      conversationName = conversationName.substring(0, 30) + '...';
+    }
+
+    console.log('Generated conversation name:', conversationName);
+
+    res.json({ 
+      conversationName: conversationName || 'New Conversation',
+      success: true 
+    });
+
+  } catch (error) {
+    console.error('Conversation name generation error:', error.response?.data || error.message);
+    
+    // Fallback to default name
+    res.json({ 
+      conversationName: 'New Conversation',
+      success: false,
+      error: 'Used fallback name due to API error'
+    });
+  }
+});
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

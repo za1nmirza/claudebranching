@@ -326,3 +326,92 @@ button {
 .empty-state p {
     font-size: 14px;
 }
+
+/* Text Selection and Floating Branch Button */
+.message.assistant .message-content {
+    cursor: text;
+    user-select: text;
+}
+
+.message.assistant .message-content::selection {
+    background-color: rgba(0, 123, 255, 0.2);
+    color: inherit;
+}
+
+.floating-branch-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    animation: fadeInUp 0.2s ease;
+}
+
+.floating-branch-btn:hover {
+    background: #0056b3;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(0, 123, 255, 0.4);
+}
+
+.floating-branch-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 8px rgba(0, 123, 255, 0.3);
+}
+
+.floating-branch-btn svg {
+    flex-shrink: 0;
+}
+
+/* Fade in animation for floating button */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Visual indication that assistant messages are selectable */
+.message.assistant:hover .message-content {
+    background-color: rgba(0, 123, 255, 0.02);
+    border-radius: 8px;
+    transition: background-color 0.2s ease;
+}
+
+/* Branch button styles */
+.branch-btn {
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: inline-block;
+}
+
+.branch-btn:hover {
+    background: var(--accent);
+    color: white;
+    border-color: var(--accent);
+}
+
+.message-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+    align-items: center;
+}

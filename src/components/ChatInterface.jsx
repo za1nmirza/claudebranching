@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 const ChatInterface = ({ messages = [], onSendMessage, isLoading = false, conversationManager, onMessagesUpdate, conversationUpdate }) => {
   const [inputValue, setInputValue] = useState('');
+  const [selectedText, setSelectedText] = useState('');
+  const [selectedMessageId, setSelectedMessageId] = useState(null);
 
   const handleSendMessage = (e) => {
     e.preventDefault();
@@ -18,6 +20,93 @@ const ChatInterface = ({ messages = [], onSendMessage, isLoading = false, conver
     }
   };
 
+  useEffect(() => {
+    const handleSelectionChange = () => {
+      const selection = window.getSelection();
+      const selectedTextContent = selection.toString().trim();
+      
+      if (selectedTextContent && selection.rangeCount > 0) {
+        const range = selection.getRangeAt(0);
+        const messageElement = range.commonAncestorContainer.nodeType === Node.TEXT_NODE 
+          ? range.commonAncestorContainer.parentElement.closest('.message.assistant')
+          : range.commonAncestorContainer.closest('.message.assistant');
+        
+        if (messageElement) {
+          const messageId = messageElement.getAttribute('data-message-id');
+          if (messageId) {
+            setSelectedText(selectedTextContent);
+            setSelectedMessageId(messageId);
+            return;
+          }
+        }
+      }
+      
+      setSelectedText('');
+      setSelectedMessageId(null);
+    };
+
+    document.addEventListener('selectionchange', handleSelectionChange);
+    return () => document.removeEventListener('selectionchange', handleSelectionChange);
+  }, []);
+
+  const handleTextBranch = async () => {
+    if (!selectedMessageId || !selectedText) return;
+    
+    try {
+      const message = messages.find(m => m.id === selectedMessageId);
+      if (!message) return;
+
+      const messageIndex = messages.findIndex(m => m.id === selectedMessageId);
+      const recentMessages = messages.slice(Math.max(0, messageIndex - 1), messageIndex + 1);
+      
+      let branchTitle = 'New Branch';
+      
+      try {
+        const lastUserMessage = recentMessages.find(m => m.sender === 'user')?.content || '';
+        const lastAssistantMessage = message.content;
+        
+        const response = await fetch('http://localhost:3001/api/generate-branch-name', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            lastUserMessage,
+            lastAssistantMessage,
+            selectedText
+          })
+        });
+        
+        const data = await response.json();
+        if (data.success && data.branchName) {
+          branchTitle = data.branchName;
+        }
+      } catch (error) {
+        console.log('Failed to auto-generate branch name, using default');
+      }
+
+      const newBranch = conversationManager.createBranchFromMessage(selectedMessageId, branchTitle);
+        
+      if (newBranch) {
+          // Add only the selected text as an assistant message to start the new branch
+          const assistantMessage = {
+            id: `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            content: `"${selectedText}"`,
+            sender: 'assistant',
+            timestamp: Date.now()
+          };
+          
+          newBranch.messages = [assistantMessage];
+          onMessagesUpdate([assistantMessage]);
+      }
+      
+      setSelectedText('');
+      setSelectedMessageId(null);
+      window.getSelection().removeAllRanges();
+    } catch (error) {
+      console.error('Error creating branch from selection:', error);
+      alert('Failed to create branch: ' + error.message);
+    }
+  };
+
   const handleBranch = async (messageId) => {
     try {
       // Find the message to branch from
@@ -26,54 +115,57 @@ const ChatInterface = ({ messages = [], onSendMessage, isLoading = false, conver
 
       // Find recent context for auto-naming
       const messageIndex = messages.findIndex(m => m.id === messageId);
-      const recentMessages = messages.slice(Math.max(0, messageIndex - 2), messageIndex + 1);
+      const recentMessages = messages.slice(Math.max(0, messageIndex - 1), messageIndex + 1);
       
-      let branchTitle = 'Branch';
-
-      // Try to auto-generate branch name based on recent conversation
-      if (recentMessages.length > 0) {
-        try {
-          const conversationContext = recentMessages.map(m => `${m.sender}: ${m.content}`).join('\n');
-          
-          const response = await fetch('http://localhost:3001/api/generate-branch-name', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              lastUserMessage: recentMessages.find(m => m.sender === 'user')?.content || '',
-              lastAssistantMessage: recentMessages.find(m => m.sender === 'assistant')?.content || message.content
-            })
-          });
-          
-          const data = await response.json();
-          if (data.success && data.branchName) {
-            branchTitle = data.branchName;
-          }
-        } catch (error) {
-          console.log('Failed to auto-generate branch name, using default');
+      // Auto-generate branch name based on message content
+      let branchTitle = 'New Branch';
+      
+      try {
+        const lastUserMessage = recentMessages.find(m => m.sender === 'user')?.content || '';
+        const lastAssistantMessage = message.content;
+        
+        const response = await fetch('http://localhost:3001/api/generate-branch-name', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            lastUserMessage,
+            lastAssistantMessage
+          })
+        });
+        
+        const data = await response.json();
+        if (data.success && data.branchName) {
+          branchTitle = data.branchName;
         }
+      } catch (error) {
+        console.log('Failed to auto-generate branch name, using default');
       }
 
-      // Let user edit the auto-generated name
-      const userTitle = prompt(`Create new branch:`, branchTitle);
-      if (userTitle) {
-        // Create a branch from the current message within the same conversation
-        const newBranch = conversationManager.createBranchFromMessage(messageId, userTitle);
-        if (newBranch) {
-          // Clear the new branch to start fresh
-          newBranch.messages = [];
-          // Switch to the new branch and show empty messages
-          onMessagesUpdate([]);
-        }
+      // Create a branch from the current message and switch to it in same window
+      const newBranch = conversationManager.createBranchFromMessage(messageId, branchTitle);
+        
+      if (newBranch) {
+          // Add the full assistant message to start the new branch
+          const assistantMessage = {
+            id: `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            content: `"${message.content}"`,
+            sender: 'assistant',
+            timestamp: Date.now()
+          };
+          
+          newBranch.messages = [assistantMessage];
+          
+          // Switch to the new branch in the same window
+          onMessagesUpdate([assistantMessage]);
       }
     } catch (error) {
       console.error('Error creating branch:', error);
-      alert('Failed to create branch. Please try again.');
+      alert('Failed to create branch: ' + error.message);
     }
-  };
+  };;;
 
   const handleNewMainChat = () => {
     try {
-      // Create a new conversation with temporary name
       const newConversation = conversationManager.createConversation('New Chat');
       if (newConversation) {
         onMessagesUpdate([]);
@@ -97,7 +189,6 @@ const ChatInterface = ({ messages = [], onSendMessage, isLoading = false, conver
 
   const conversation = conversationManager?.getCurrentConversation();
   const breadcrumbs = conversation?.breadcrumbs || ['Main'];
-  const branches = conversationManager?.getAllActiveBranches() || [];
 
   return (
     <div className="app">
@@ -186,24 +277,41 @@ const ChatInterface = ({ messages = [], onSendMessage, isLoading = false, conver
               </div>
             ) : (
               messages.map((message) => (
-                <div key={message.id} className={`message ${message.sender}`}>
+                <div 
+                  key={message.id} 
+                  className={`message ${message.sender}`}
+                  data-message-id={message.id}
+                >
                   <div className="message-content">
                     {message.content}
-                    {message.sender === 'assistant' && (
-                      <div className="message-actions">
+                  </div>
+                  {/* Branch buttons right after each assistant message - only show in main branch */}
+                  {message.sender === 'assistant' && conversationManager?.currentBranch === 'main' && (
+                    <div style={{marginTop: '4px', display: 'flex', gap: '8px', justifyContent: 'flex-start', width: '100%'}}>
+                      <button 
+                        className="branch-btn"
+                        onClick={() => handleBranch(message.id)}
+                        title="Create a new branch from this message"
+                      >
+                        🌿 Branch from full response
+                      </button>
+                      {selectedText && selectedMessageId === message.id && (
                         <button 
                           className="branch-btn"
-                          onClick={() => handleBranch(message.id)}
-                          title="Create a new conversation"
+                          onClick={handleTextBranch}
+                          title="Create a new branch from selected text"
+                          style={{backgroundColor: 'var(--accent)', color: 'white'}}
                         >
-                          Branch
+                          🌿 Branch from selection
                         </button>
-                      </div>
-                    )}
-                  </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               ))
             )}
+            
+            
             {isLoading && (
               <div className="message assistant">
                 <div className="message-content loading">
@@ -236,6 +344,7 @@ const ChatInterface = ({ messages = [], onSendMessage, isLoading = false, conver
           </div>
         </div>
       </div>
+
     </div>
   );
 };
