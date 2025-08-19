@@ -348,6 +348,28 @@ export class ConversationManager {
       return true;
     }, false);
   }
+
+  deleteConversation(conversationId) {
+    console.log('🔍 Available conversations:', Array.from(this.conversations.keys()));
+    console.log('🎯 Trying to delete:', conversationId);
+    
+    if (!this.conversations.has(conversationId)) {
+      console.log('❌ Cannot delete - conversation not found:', conversationId);
+      return false;
+    }
+
+    console.log('🗑️ Deleting conversation:', conversationId);
+    this.conversations.delete(conversationId);
+    
+    // If we deleted the current conversation, reset to null
+    if (this.currentConversationId === conversationId) {
+      this.currentConversationId = null;
+      this.currentBranch = 'main';
+    }
+    
+    this._saveToStorage();
+    return true;
+  }
 }
 
 export default ConversationManager;

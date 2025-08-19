@@ -135,6 +135,7 @@ function App() {
         conversationManager={conversationManager}
         onMessagesUpdate={setMessages}
         conversationUpdate={conversationUpdate}
+        setConversationUpdate={setConversationUpdate}
       />
     </div>
   );

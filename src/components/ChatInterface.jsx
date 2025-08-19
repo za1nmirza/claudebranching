@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-const ChatInterface = ({ messages = [], onSendMessage, isLoading = false, conversationManager, onMessagesUpdate, conversationUpdate }) => {
+const ChatInterface = ({ messages = [], onSendMessage, isLoading = false, conversationManager, onMessagesUpdate, conversationUpdate, setConversationUpdate }) => {
   const [inputValue, setInputValue] = useState('');
   const [selectedText, setSelectedText] = useState('');
   const [selectedMessageId, setSelectedMessageId] = useState(null);
@@ -187,6 +187,45 @@ const ChatInterface = ({ messages = [], onSendMessage, isLoading = false, conver
     }
   };
 
+  const handleBreadcrumbClick = (index) => {
+    if (index === 0 && conversationManager?.currentBranch !== 'main') {
+      // Click on "Main Channel" - switch back to main branch
+      handleSwitchBranch('main');
+    }
+  };
+
+  const handleDeleteConversation = (conversationId, e) => {
+    e.stopPropagation(); // Prevent clicking on the conversation
+    
+    if (confirm('Are you sure you want to delete this conversation?')) {
+      try {
+        conversationManager.deleteConversation(conversationId);
+        
+        // Force component re-render and handle navigation
+        const remaining = Array.from(conversationManager.conversations.values());
+        
+        if (conversationManager.currentConversationId === conversationId) {
+          // We deleted the current conversation, switch to another one or create new
+          if (remaining.length > 0) {
+            conversationManager.currentConversationId = remaining[0].id;
+            conversationManager.currentBranch = 'main';
+            onMessagesUpdate(conversationManager.getCurrentBranch().messages);
+          } else {
+            // No conversations left, create a new one
+            const newConversation = conversationManager.createConversation('New Chat');
+            onMessagesUpdate([]);
+          }
+        }
+        
+        // Force component re-render to update sidebar immediately
+        setConversationUpdate(prev => prev + 1);
+      } catch (error) {
+        console.error('Error deleting conversation:', error);
+        alert('Failed to delete conversation. Please try again.');
+      }
+    }
+  };
+
   const conversation = conversationManager?.getCurrentConversation();
   const breadcrumbs = conversation?.breadcrumbs || ['Main'];
 
@@ -195,12 +234,12 @@ const ChatInterface = ({ messages = [], onSendMessage, isLoading = false, conver
       <div className="chat-wrapper">
         {/* Sidebar */}
         <div className="sidebar">
-          <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px'}}>
-            <h2>Conversations</h2>
+          <div style={{marginBottom: '30px'}}>
+            <h2 style={{marginBottom: '15px'}}>Conversations</h2>
             <button 
               onClick={handleNewMainChat}
               className="branch-btn"
-              style={{fontSize: '12px', padding: '6px 10px'}}
+              style={{fontSize: '12px', padding: '8px 14px', backgroundColor: '#28a745', color: 'white', border: '1px solid #28a745'}}
               title="Start a new main conversation"
             >
               + New Chat
@@ -223,8 +262,27 @@ const ChatInterface = ({ messages = [], onSendMessage, isLoading = false, conver
                         onMessagesUpdate(currentBranch?.messages || []);
                       }}
                       title={`Main conversation - Messages: ${conv.branches?.get('main')?.messages?.length || 0}`}
+                      style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}
                     >
-                      📁 {conv.title}
+                      <span>📁 {conv.title}</span>
+                      <button 
+                        onClick={(e) => handleDeleteConversation(conv.id, e)}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: 'var(--text-secondary)',
+                          cursor: 'pointer',
+                          padding: '2px 6px',
+                          fontSize: '14px',
+                          borderRadius: '3px',
+                          opacity: 0.7
+                        }}
+                        onMouseEnter={(e) => e.target.style.opacity = '1'}
+                        onMouseLeave={(e) => e.target.style.opacity = '0.7'}
+                        title="Delete conversation"
+                      >
+                        ×
+                      </button>
                     </div>
                     {/* Show branches as sub-files under the main conversation */}
                     {conversationManager?.currentConversationId === conv.id && (
@@ -259,7 +317,13 @@ const ChatInterface = ({ messages = [], onSendMessage, isLoading = false, conver
             <div className="breadcrumb">
               {breadcrumbs.map((crumb, index) => (
                 <React.Fragment key={index}>
-                  <span className="breadcrumb-item">{crumb}</span>
+                  <span 
+                    className="breadcrumb-item"
+                    onClick={() => handleBreadcrumbClick(index)}
+                    style={{cursor: index === 0 && conversationManager?.currentBranch !== 'main' ? 'pointer' : 'default'}}
+                  >
+                    {crumb}
+                  </span>
                   {index < breadcrumbs.length - 1 && (
                     <span className="breadcrumb-separator">›</span>
                   )}
@@ -272,8 +336,6 @@ const ChatInterface = ({ messages = [], onSendMessage, isLoading = false, conver
           <div className="messages">
             {messages.length === 0 ? (
               <div className="empty-state">
-                <h3>Welcome to Claude Branching Chat</h3>
-                <p>Start a conversation and create branches to explore different topics!</p>
               </div>
             ) : (
               messages.map((message) => (
@@ -284,29 +346,29 @@ const ChatInterface = ({ messages = [], onSendMessage, isLoading = false, conver
                 >
                   <div className="message-content">
                     {message.content}
-                  </div>
-                  {/* Branch buttons right after each assistant message - only show in main branch */}
-                  {message.sender === 'assistant' && conversationManager?.currentBranch === 'main' && (
-                    <div style={{marginTop: '4px', display: 'flex', gap: '8px', justifyContent: 'flex-start', width: '100%'}}>
-                      <button 
-                        className="branch-btn"
-                        onClick={() => handleBranch(message.id)}
-                        title="Create a new branch from this message"
-                      >
-                        🌿 Branch from full response
-                      </button>
-                      {selectedText && selectedMessageId === message.id && (
+                    {/* Branch buttons inside assistant message content - only show in main branch */}
+                    {message.sender === 'assistant' && conversationManager?.currentBranch === 'main' && (
+                      <div style={{marginTop: '12px', display: 'flex', gap: '8px', justifyContent: 'flex-start'}}>
                         <button 
                           className="branch-btn"
-                          onClick={handleTextBranch}
-                          title="Create a new branch from selected text"
-                          style={{backgroundColor: 'var(--accent)', color: 'white'}}
+                          onClick={() => handleBranch(message.id)}
+                          title="Create a new branch from this message"
                         >
-                          🌿 Branch from selection
+                          🌿 Branch from full response
                         </button>
-                      )}
-                    </div>
-                  )}
+                        {selectedText && selectedMessageId === message.id && (
+                          <button 
+                            className="branch-btn"
+                            onClick={handleTextBranch}
+                            title="Create a new branch from selected text"
+                            style={{backgroundColor: 'var(--accent)', color: 'white'}}
+                          >
+                            🌿 Branch from selection
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
               ))
             )}
