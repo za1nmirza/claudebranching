@@ -4,6 +4,8 @@ const ChatInterface = ({ messages = [], onSendMessage, isLoading = false, conver
   const [inputValue, setInputValue] = useState('');
   const [selectedText, setSelectedText] = useState('');
   const [selectedMessageId, setSelectedMessageId] = useState(null);
+  const [swipeState, setSwipeState] = useState({});
+  const [isMouseDragging, setIsMouseDragging] = useState(false);
 
   const handleSendMessage = (e) => {
     e.preventDefault();
@@ -21,32 +23,74 @@ const ChatInterface = ({ messages = [], onSendMessage, isLoading = false, conver
   };
 
   useEffect(() => {
+    let selectionTimeout;
+    
     const handleSelectionChange = () => {
-      const selection = window.getSelection();
-      const selectedTextContent = selection.toString().trim();
-      
-      if (selectedTextContent && selection.rangeCount > 0) {
-        const range = selection.getRangeAt(0);
-        const messageElement = range.commonAncestorContainer.nodeType === Node.TEXT_NODE 
-          ? range.commonAncestorContainer.parentElement.closest('.message.assistant')
-          : range.commonAncestorContainer.closest('.message.assistant');
-        
-        if (messageElement) {
-          const messageId = messageElement.getAttribute('data-message-id');
-          if (messageId) {
-            setSelectedText(selectedTextContent);
-            setSelectedMessageId(messageId);
-            return;
-          }
-        }
+      // Clear any existing timeout
+      if (selectionTimeout) {
+        clearTimeout(selectionTimeout);
       }
       
-      setSelectedText('');
-      setSelectedMessageId(null);
+      // Add a small delay to let the selection settle
+      selectionTimeout = setTimeout(() => {
+        const selection = window.getSelection();
+        const selectedTextContent = selection.toString().trim();
+        
+        console.log('Selection detected:', selectedTextContent.length > 0 ? `"${selectedTextContent}" (${selectedTextContent.length} chars)` : 'empty');
+        
+        // Only process if we have actual text selected (minimum 2 characters to avoid single character flicker)
+        if (selectedTextContent && selectedTextContent.length >= 2 && selection.rangeCount > 0) {
+          const range = selection.getRangeAt(0);
+          
+          // More robust way to find the assistant message element
+          let messageElement = null;
+          
+          // Start from the range's start container and walk up
+          let currentNode = range.startContainer;
+          while (currentNode && currentNode !== document) {
+            if (currentNode.nodeType === Node.ELEMENT_NODE) {
+              if (currentNode.classList && currentNode.classList.contains('message') && currentNode.classList.contains('assistant')) {
+                messageElement = currentNode;
+                break;
+              }
+              // Also check if this element contains a message with the right classes
+              const parentMessage = currentNode.closest('.message.assistant');
+              if (parentMessage) {
+                messageElement = parentMessage;
+                break;
+              }
+            }
+            currentNode = currentNode.parentNode;
+          }
+          
+          console.log('Message element found:', messageElement ? 'yes' : 'no');
+          
+          if (messageElement) {
+            const messageId = messageElement.getAttribute('data-message-id');
+            console.log('Message ID:', messageId);
+            if (messageId) {
+              setSelectedText(selectedTextContent);
+              setSelectedMessageId(messageId);
+              return;
+            }
+          }
+        }
+        
+        // Only clear if we don't have a valid selection
+        if (!selectedTextContent || selectedTextContent.length < 2) {
+          setSelectedText('');
+          setSelectedMessageId(null);
+        }
+      }, 100); // Increased delay to 100ms for more stability
     };
 
     document.addEventListener('selectionchange', handleSelectionChange);
-    return () => document.removeEventListener('selectionchange', handleSelectionChange);
+    return () => {
+      if (selectionTimeout) {
+        clearTimeout(selectionTimeout);
+      }
+      document.removeEventListener('selectionchange', handleSelectionChange);
+    };
   }, []);
 
   const handleTextBranch = async () => {
@@ -226,6 +270,120 @@ const ChatInterface = ({ messages = [], onSendMessage, isLoading = false, conver
     }
   };
 
+  const handleSwipeStart = (branchId, e) => {
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    
+    console.log('Swipe start for branch:', branchId, 'at X:', clientX);
+    
+    // For mouse events, set dragging state
+    if (!e.touches) {
+      setIsMouseDragging(true);
+    }
+    
+    setSwipeState(prev => ({
+      ...prev,
+      [branchId]: {
+        startX: clientX,
+        startY: clientY,
+        currentX: clientX,
+        isDragging: false,
+        deltaX: 0
+      }
+    }));
+  };
+
+  const handleSwipeMove = (branchId, e) => {
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    const state = swipeState[branchId];
+    
+    if (!state) return;
+    
+    // Prevent default only if we're actively dragging
+    if (state.isDragging || Math.abs(clientX - state.startX) > 5) {
+      e.preventDefault();
+    }
+    
+    const deltaX = clientX - state.startX;
+    const deltaY = clientY - state.startY;
+    
+    console.log('Swipe move for branch:', branchId, 'deltaX:', deltaX, 'deltaY:', deltaY);
+    
+    // Start dragging if moved more than 5px horizontally
+    if (Math.abs(deltaX) > 5) {
+      console.log('Setting dragging state for branch:', branchId);
+      setSwipeState(prev => ({
+        ...prev,
+        [branchId]: {
+          ...state,
+          currentX: clientX,
+          isDragging: true,
+          deltaX: deltaX
+        }
+      }));
+    }
+  };
+
+  const handleSwipeEnd = (branchId, e) => {
+    const state = swipeState[branchId];
+    
+    console.log('Swipe end for branch:', branchId, 'state:', state);
+    
+    // Reset mouse dragging state
+    setIsMouseDragging(false);
+    
+    if (!state) return;
+    
+    const deltaX = state.deltaX || 0;
+    
+    console.log('Final deltaX:', deltaX);
+    
+    // If swiped right more than 100px, trigger delete
+    if (deltaX > 100) {
+      console.log('Triggering delete for branch:', branchId);
+      handleDeleteBranch(branchId);
+    }
+    
+    // Reset swipe state
+    setSwipeState(prev => {
+      const newState = { ...prev };
+      delete newState[branchId];
+      return newState;
+    });
+  };
+
+  const handleDeleteBranch = (branchId) => {
+    if (confirm('Are you sure you want to delete this branch?')) {
+      try {
+        const conversation = conversationManager.getCurrentConversation();
+        if (!conversation) return;
+        
+        // Don't allow deleting the main branch
+        if (branchId === 'main') {
+          alert('Cannot delete the main branch');
+          return;
+        }
+        
+        // Delete the branch
+        conversation.branches.delete(branchId);
+        
+        // If we're currently on this branch, switch to main
+        if (conversationManager.currentBranch === branchId) {
+          conversationManager.currentBranch = 'main';
+          onMessagesUpdate(conversationManager.getCurrentBranch().messages);
+        }
+        
+        // Save and update UI
+        conversationManager._saveToStorage();
+        setConversationUpdate(prev => prev + 1);
+      } catch (error) {
+        console.error('Error deleting branch:', error);
+        alert('Failed to delete branch. Please try again.');
+      }
+    }
+  };
+
   const conversation = conversationManager?.getCurrentConversation();
   const breadcrumbs = conversation?.breadcrumbs || ['Main'];
 
@@ -264,7 +422,10 @@ const ChatInterface = ({ messages = [], onSendMessage, isLoading = false, conver
                       title={`Main conversation - Messages: ${conv.branches?.get('main')?.messages?.length || 0}`}
                       style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}
                     >
-                      <span>📁 {conv.title}</span>
+                      <span>
+                        {Array.from(conv.branches.values()).filter(branch => branch.id !== 'main').length > 0 ? '📁 ' : ''}
+                        {conv.title}
+                      </span>
                       <button 
                         onClick={(e) => handleDeleteConversation(conv.id, e)}
                         style={{
@@ -287,16 +448,85 @@ const ChatInterface = ({ messages = [], onSendMessage, isLoading = false, conver
                     {/* Show branches as sub-files under the main conversation */}
                     {conversationManager?.currentConversationId === conv.id && (
                       <div style={{marginLeft: '20px'}}>
-                        {Array.from(conv.branches.values()).filter(branch => branch.id !== 'main').map(branch => (
-                          <div 
-                            key={branch.id}
-                            className={`branch-item ${conversationManager?.currentBranch === branch.id ? 'active' : ''}`}
-                            onClick={() => handleSwitchBranch(branch.id)}
-                            style={{fontSize: '13px', paddingLeft: '8px'}}
-                          >
-                            📄 {branch.title} ({branch.messages?.length || 0})
-                          </div>
-                        ))}
+                        {Array.from(conv.branches.values()).filter(branch => branch.id !== 'main').map(branch => {
+                          const swipe = swipeState[branch.id];
+                          const translateX = swipe?.isDragging ? Math.max(0, swipe.deltaX) : 0;
+                          const showDelete = translateX > 50;
+                          
+                          return (
+                            <div 
+                              key={branch.id}
+                              className={`branch-item swipeable ${conversationManager?.currentBranch === branch.id ? 'active' : ''}`}
+                              onClick={() => !swipe?.isDragging && handleSwitchBranch(branch.id)}
+                              onTouchStart={(e) => handleSwipeStart(branch.id, e)}
+                              onTouchMove={(e) => handleSwipeMove(branch.id, e)}
+                              onTouchEnd={(e) => handleSwipeEnd(branch.id, e)}
+                              onMouseDown={(e) => handleSwipeStart(branch.id, e)}
+                              onMouseMove={(e) => isMouseDragging && handleSwipeMove(branch.id, e)}
+                              onMouseUp={(e) => handleSwipeEnd(branch.id, e)}
+                              onMouseLeave={(e) => isMouseDragging && handleSwipeEnd(branch.id, e)}
+                              style={{
+                                fontSize: '13px', 
+                                paddingLeft: '8px',
+                                transform: `translateX(${translateX}px)`,
+                                transition: swipe?.isDragging ? 'none' : 'transform 0.3s ease',
+                                position: 'relative',
+                                backgroundColor: showDelete ? '#ffebee' : undefined,
+                                borderColor: showDelete ? '#f44336' : undefined,
+                                cursor: swipe?.isDragging ? 'grabbing' : 'pointer'
+                              }}
+                            >
+                              <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+                                <span>{branch.title}</span>
+                                <div style={{display: 'flex', gap: '4px', alignItems: 'center'}}>
+                                  {showDelete && (
+                                    <span style={{color: '#f44336', fontSize: '12px', opacity: 0.8}}>
+                                      ← Swipe to delete
+                                    </span>
+                                  )}
+                                  {/* Temporary delete button for testing */}
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleDeleteBranch(branch.id);
+                                    }}
+                                    style={{
+                                      background: 'none',
+                                      border: 'none',
+                                      color: 'var(--text-secondary)',
+                                      cursor: 'pointer',
+                                      padding: '2px 4px',
+                                      fontSize: '12px',
+                                      opacity: 0.6
+                                    }}
+                                    title="Delete branch (test button)"
+                                  >
+                                    ×
+                                  </button>
+                                </div>
+                              </div>
+                              {showDelete && (
+                                <div 
+                                  style={{
+                                    position: 'absolute',
+                                    right: -translateX,
+                                    top: 0,
+                                    bottom: 0,
+                                    width: translateX,
+                                    backgroundColor: '#f44336',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    color: 'white',
+                                    fontSize: '12px'
+                                  }}
+                                >
+                                  🗑️
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
                       </div>
                     )}
                   </div>

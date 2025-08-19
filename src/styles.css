@@ -148,6 +148,17 @@ body {
     align-items: center;
 }
 
+/* Swipe to delete styles */
+.branch-item.swipeable {
+    touch-action: pan-y;
+    user-select: none;
+    overflow: hidden;
+}
+
+.branch-item.swipeable:active {
+    background: var(--hover);
+}
+
 .branch-btn {
     background: var(--bg-tertiary);
     border: 1px solid var(--border);
@@ -414,4 +425,15 @@ button {
     gap: 8px;
     margin-top: 8px;
     align-items: center;
+}
+
+/* Swipe to delete styles */
+.branch-item.swipeable {
+    touch-action: pan-y;
+    user-select: none;
+    overflow: hidden;
+}
+
+.branch-item.swipeable:active {
+    background: var(--hover);
 }
