@@ -1,4 +1,126 @@
 import React, { useState, useEffect } from 'react';
+import ReactMarkdown from 'react-markdown';
+
+// Helper function to convert HTML to markdown while preserving formatting
+const convertHTMLToMarkdown = (html, fallbackText) => {
+  if (!html || html === fallbackText) {
+    return fallbackText;
+  }
+  
+  
+  // Comprehensive HTML to markdown conversion preserving all formatting
+  let markdown = html;
+  
+  // Convert paragraph tags to double line breaks
+  markdown = markdown.replace(/<p[^>]*>/gi, '');
+  markdown = markdown.replace(/<\/p>/gi, '\n\n');
+  
+  // Convert line breaks to markdown line breaks
+  markdown = markdown.replace(/<br\s*\/?>/gi, '\n');
+  
+  // Handle the specific pattern where empty <li></li> are followed by <p> tags
+  // Clean conversion without bullets for aesthetic formatting
+  markdown = markdown.replace(/<ul>\s*<li><\/li>\s*<\/ul>\s*<p>/gi, '\n\n');
+  markdown = markdown.replace(/<\/p>\s*<ul>\s*<li><\/li>\s*<\/ul>\s*<p>/gi, '\n\n');
+  
+  // Handle mixed content selections (paragraphs + lists)
+  // First convert strong/em tags to markdown before processing structure
+  markdown = markdown.replace(/<strong[^>]*>(.*?)<\/strong>/gi, '**$1**');
+  markdown = markdown.replace(/<em[^>]*>(.*?)<\/em>/gi, '*$1*');
+  
+  // Handle cases where selection contains list items
+  if (html.includes('<li>')) {
+    
+    // Extract all list item contents preserving formatting
+    const listItemRegex = /<li[^>]*>([\s\S]*?)<\/li>/gi;
+    const items = [];
+    let match;
+    while ((match = listItemRegex.exec(html)) !== null) {
+      let itemContent = match[1].trim();
+      
+      // Remove wrapping <p> tags but keep inner formatting that was already converted
+      itemContent = itemContent.replace(/^<p[^>]*>/, '').replace(/<\/p>$/, '');
+      
+      // Remove any remaining HTML tags (formatting was already converted above)
+      itemContent = itemContent.replace(/<[^>]*>/g, '');
+      
+      if (itemContent.trim()) {
+        items.push(itemContent.trim());
+      }
+    }
+    
+    // Also handle any paragraph content before or after lists
+    let nonListContent = markdown.replace(/<ul[\s\S]*?<\/ul>/gi, '');
+    nonListContent = nonListContent.replace(/<p[^>]*>/gi, '').replace(/<\/p>/gi, '');
+    nonListContent = nonListContent.replace(/<[^>]*>/g, '').trim();
+    
+    const allItems = [];
+    if (nonListContent) {
+      allItems.push(nonListContent);
+    }
+    allItems.push(...items);
+    
+    if (allItems.length > 0) {
+      return allItems.join('\n\n');
+    }
+  }
+  
+  // Clean up any remaining empty ul/li tags
+  markdown = markdown.replace(/<ul>\s*<li><\/li>\s*<\/ul>/gi, '');
+  markdown = markdown.replace(/<\/?li>/gi, '');
+  markdown = markdown.replace(/<\/?ul>/gi, '');
+  
+  // Convert remaining unordered lists (normal case) - remove bullets for clean aesthetic
+  markdown = markdown.replace(/<ul[^>]*>/gi, '');
+  markdown = markdown.replace(/<\/ul>/gi, '\n\n');
+  markdown = markdown.replace(/<li[^>]*>/gi, '');
+  markdown = markdown.replace(/<\/li>/gi, '\n\n');
+  
+  // Convert ordered lists
+  let listItemCounter = 1;
+  markdown = markdown.replace(/<ol[^>]*>/gi, () => {
+    listItemCounter = 1;
+    return '';
+  });
+  markdown = markdown.replace(/<\/ol>/gi, '\n\n');
+  markdown = markdown.replace(/<li[^>]*>/gi, () => `${listItemCounter++}. `);
+  
+  // Convert strong tags to markdown bold
+  markdown = markdown.replace(/<strong[^>]*>(.*?)<\/strong>/gi, '**$1**');
+  
+  // Convert em tags to markdown italic
+  markdown = markdown.replace(/<em[^>]*>(.*?)<\/em>/gi, '*$1*');
+  
+  // Convert heading tags
+  markdown = markdown.replace(/<h1[^>]*>(.*?)<\/h1>/gi, '# $1\n\n');
+  markdown = markdown.replace(/<h2[^>]*>(.*?)<\/h2>/gi, '## $1\n\n');
+  markdown = markdown.replace(/<h3[^>]*>(.*?)<\/h3>/gi, '### $1\n\n');
+  markdown = markdown.replace(/<h4[^>]*>(.*?)<\/h4>/gi, '#### $1\n\n');
+  markdown = markdown.replace(/<h5[^>]*>(.*?)<\/h5>/gi, '##### $1\n\n');
+  markdown = markdown.replace(/<h6[^>]*>(.*?)<\/h6>/gi, '###### $1\n\n');
+  
+  // Convert code blocks
+  markdown = markdown.replace(/<pre[^>]*><code[^>]*>(.*?)<\/code><\/pre>/gi, '```\n$1\n```\n\n');
+  markdown = markdown.replace(/<code[^>]*>(.*?)<\/code>/gi, '`$1`');
+  
+  // Convert blockquotes
+  markdown = markdown.replace(/<blockquote[^>]*>(.*?)<\/blockquote>/gi, '> $1\n\n');
+  
+  // Remove remaining HTML tags but keep their content
+  markdown = markdown.replace(/<[^>]+>/g, '');
+  
+  // Decode HTML entities
+  const tempDiv = document.createElement('div');
+  tempDiv.innerHTML = markdown;
+  markdown = tempDiv.textContent || tempDiv.innerText || '';
+  
+  // Clean up excessive line breaks while preserving intentional paragraph spacing
+  markdown = markdown.replace(/\n\n\n+/g, '\n\n'); // Replace 3+ line breaks with 2
+  markdown = markdown.replace(/^\n+/, ''); // Remove leading line breaks
+  markdown = markdown.replace(/\n+$/, ''); // Remove trailing line breaks
+  
+  return markdown;
+};
 
 const ChatInterface = ({ messages = [], onSendMessage, isLoading = false, conversationManager, onMessagesUpdate, conversationUpdate, setConversationUpdate }) => {
   const [inputValue, setInputValue] = useState('');
@@ -31,22 +153,31 @@ const ChatInterface = ({ messages = [], onSendMessage, isLoading = false, conver
         clearTimeout(selectionTimeout);
       }
       
-      // Add a small delay to let the selection settle
+      // Add a delay to debounce selection changes for better performance
       selectionTimeout = setTimeout(() => {
         const selection = window.getSelection();
         const selectedTextContent = selection.toString().trim();
         
-        console.log('Selection detected:', selectedTextContent.length > 0 ? `"${selectedTextContent}" (${selectedTextContent.length} chars)` : 'empty');
-        
-        // Only process if we have actual text selected (minimum 2 characters to avoid single character flicker)
-        if (selectedTextContent && selectedTextContent.length >= 2 && selection.rangeCount > 0) {
+        // Only process if we have meaningful text selected (minimum 10 characters to reduce noise)
+        if (selectedTextContent && selectedTextContent.length >= 10 && selection.rangeCount > 0) {
           const range = selection.getRangeAt(0);
+          
+          // Check if the selection is inside a strong element
+          let isInStrongElement = false;
+          let currentNode = range.startContainer;
+          while (currentNode && currentNode !== document) {
+            if (currentNode.nodeType === Node.ELEMENT_NODE && currentNode.tagName === 'STRONG') {
+              isInStrongElement = true;
+              break;
+            }
+            currentNode = currentNode.parentNode;
+          }
           
           // More robust way to find the assistant message element
           let messageElement = null;
           
           // Start from the range's start container and walk up
-          let currentNode = range.startContainer;
+          currentNode = range.startContainer;
           while (currentNode && currentNode !== document) {
             if (currentNode.nodeType === Node.ELEMENT_NODE) {
               if (currentNode.classList && currentNode.classList.contains('message') && currentNode.classList.contains('assistant')) {
@@ -63,13 +194,26 @@ const ChatInterface = ({ messages = [], onSendMessage, isLoading = false, conver
             currentNode = currentNode.parentNode;
           }
           
-          console.log('Message element found:', messageElement ? 'yes' : 'no');
-          
           if (messageElement) {
             const messageId = messageElement.getAttribute('data-message-id');
-            console.log('Message ID:', messageId);
             if (messageId) {
-              setSelectedText(selectedTextContent);
+              // Get the HTML content of the selection to preserve formatting
+              let markdownText = selectedTextContent;
+              
+              if (selection.rangeCount > 0) {
+                const range = selection.getRangeAt(0);
+                const fragment = range.cloneContents();
+                
+                // Create a temporary div to get the HTML
+                const tempDiv = document.createElement('div');
+                tempDiv.appendChild(fragment);
+                const selectionHTML = tempDiv.innerHTML;
+                
+                // Convert the HTML to markdown while preserving formatting
+                markdownText = convertHTMLToMarkdown(selectionHTML, selectedTextContent);
+              }
+              
+              setSelectedText(markdownText);
               setSelectedMessageId(messageId);
               return;
             }
@@ -77,11 +221,11 @@ const ChatInterface = ({ messages = [], onSendMessage, isLoading = false, conver
         }
         
         // Only clear if we don't have a valid selection
-        if (!selectedTextContent || selectedTextContent.length < 2) {
+        if (!selectedTextContent || selectedTextContent.length < 10) {
           setSelectedText('');
           setSelectedMessageId(null);
         }
-      }, 100); // Increased delay to 100ms for more stability
+      }, 200); // Increased delay to 200ms for better performance
     };
 
     document.addEventListener('selectionchange', handleSelectionChange);
@@ -133,7 +277,7 @@ const ChatInterface = ({ messages = [], onSendMessage, isLoading = false, conver
           // Add only the selected text as an assistant message to start the new branch
           const assistantMessage = {
             id: `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-            content: `"${selectedText}"`,
+            content: selectedText,
             sender: 'assistant',
             timestamp: Date.now()
           };
@@ -575,7 +719,11 @@ const ChatInterface = ({ messages = [], onSendMessage, isLoading = false, conver
                   data-message-id={message.id}
                 >
                   <div className="message-content">
-                    {message.content}
+                    {message.sender === 'assistant' ? (
+                      <ReactMarkdown>{message.content}</ReactMarkdown>
+                    ) : (
+                      message.content
+                    )}
                     {/* Branch buttons inside assistant message content - only show in main branch */}
                     {message.sender === 'assistant' && conversationManager?.currentBranch === 'main' && (
                       <div style={{marginTop: '12px', display: 'flex', gap: '8px', justifyContent: 'flex-start'}}>

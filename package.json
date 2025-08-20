@@ -9,15 +9,23 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "lucide-react": "^0.263.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "lucide-react": "^0.263.1"
+    "react-markdown": "^10.1.0"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.0.3",
     "vite": "^4.4.5"
   },
-  "keywords": ["claude", "chat", "branching", "prototype", "ui", "ux"],
+  "keywords": [
+    "claude",
+    "chat",
+    "branching",
+    "prototype",
+    "ui",
+    "ux"
+  ],
   "author": "",
   "license": "MIT"
 }
