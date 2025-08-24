@@ -111,7 +111,8 @@ export class ConversationManager {
         sender,
         timestamp: new Date(),
         branchPoint: sender === 'assistant',
-        availableBranches: []
+        availableBranches: [],
+        starred: false
       };
 
       branch.messages.push(message);
@@ -288,7 +289,7 @@ export class ConversationManager {
         timestamp: new Date().toISOString()
       };
       
-      const serialized = JSON.stringify(data, (key, value) => {
+      const serialized = JSON.stringify(data, (_, value) => {
         if (value instanceof Map) {
           return Array.from(value.entries());
         }
@@ -324,6 +325,17 @@ export class ConversationManager {
       this.conversations = parsed.conversations;
       this.currentConversationId = parsed.currentConversationId;
       this.currentBranch = parsed.currentBranch || 'main';
+      
+      // Add backward compatibility for existing messages without starred property
+      for (const [, conversation] of this.conversations) {
+        for (const [, branch] of conversation.branches) {
+          branch.messages.forEach(message => {
+            if (message.starred === undefined) {
+              message.starred = false;
+            }
+          });
+        }
+      }
       
       // Validate the loaded conversation exists
       const currentConversation = this.getCurrentConversation();
@@ -369,6 +381,74 @@ export class ConversationManager {
     
     this._saveToStorage();
     return true;
+  }
+
+  /**
+   * Toggles the starred status of a message
+   */
+  toggleMessageStar(messageId, branchId = null) {
+    try {
+      if (!validateId(messageId, 'message')) {
+        throw new ValidationError('Invalid message ID format');
+      }
+
+      const conversation = this.getCurrentConversation();
+      if (!conversation) {
+        throw new ValidationError('No active conversation');
+      }
+
+      const targetBranch = branchId || this.currentBranch;
+      const branch = conversation.branches.get(targetBranch);
+      if (!branch) {
+        throw new ValidationError('Branch not found');
+      }
+
+      const message = branch.messages.find(msg => msg.id === messageId);
+      if (!message) {
+        throw new ValidationError('Message not found');
+      }
+
+      // Toggle starred status
+      message.starred = !message.starred;
+      this._saveToStorage();
+      
+      return message.starred;
+      
+    } catch (error) {
+      logError(error, { operation: 'toggleMessageStar', messageId, branchId });
+      throw error;
+    }
+  }
+
+  /**
+   * Gets all starred messages across all conversations
+   */
+  getStarredMessages() {
+    try {
+      const starredMessages = [];
+      
+      for (const [conversationId, conversation] of this.conversations) {
+        for (const [branchId, branch] of conversation.branches) {
+          const starredInBranch = branch.messages
+            .filter(msg => msg.starred)
+            .map(msg => ({
+              ...msg,
+              conversationId,
+              conversationTitle: conversation.title,
+              branchId,
+              branchTitle: branch.title
+            }));
+          starredMessages.push(...starredInBranch);
+        }
+      }
+      
+      // Sort by timestamp, newest first
+      return starredMessages.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+      
+    } catch (error) {
+      logError(error, { operation: 'getStarredMessages' });
+      return [];
+    }
   }
 }
 

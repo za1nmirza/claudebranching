@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import ReactMarkdown from 'react-markdown';
 
 // Helper function to convert HTML to markdown while preserving formatting
@@ -128,6 +128,41 @@ const ChatInterface = ({ messages = [], onSendMessage, isLoading = false, conver
   const [selectedMessageId, setSelectedMessageId] = useState(null);
   const [swipeState, setSwipeState] = useState({});
   const [isMouseDragging, setIsMouseDragging] = useState(false);
+  const [starredSearchQuery, setStarredSearchQuery] = useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+
+  // Debounce the search query for performance
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(starredSearchQuery);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [starredSearchQuery]);
+
+  const filterStarredMessages = (messages, query) => {
+    if (!query.trim()) return messages;
+    
+    const searchTerm = query.toLowerCase();
+    return messages.filter(message => {
+      const content = message.content.toLowerCase();
+      const conversationTitle = message.conversationTitle.toLowerCase();
+      const branchTitle = message.branchTitle.toLowerCase();
+      
+      return content.includes(searchTerm) || 
+             conversationTitle.includes(searchTerm) || 
+             branchTitle.includes(searchTerm);
+    });
+  };
+
+  const handleSearchInputChange = (e) => {
+    setStarredSearchQuery(e.target.value);
+  };
+
+  const clearSearch = () => {
+    setStarredSearchQuery('');
+    setDebouncedSearchQuery('');
+  };
 
   const handleSendMessage = (e) => {
     e.preventDefault();
@@ -352,6 +387,23 @@ const ChatInterface = ({ messages = [], onSendMessage, isLoading = false, conver
     }
   };;;
 
+  const handleStarToggle = async (messageId) => {
+    try {
+      const isStarred = conversationManager.toggleMessageStar(messageId);
+      
+      // Update the UI by refreshing the messages
+      const currentBranch = conversationManager.getCurrentBranch();
+      if (currentBranch) {
+        onMessagesUpdate([...currentBranch.messages]);
+      }
+      
+      console.log(`Message ${messageId} ${isStarred ? 'starred' : 'unstarred'}`);
+    } catch (error) {
+      console.error('Error toggling star:', error);
+      alert('Failed to toggle star: ' + error.message);
+    }
+  };
+
   const handleNewMainChat = () => {
     try {
       const newConversation = conversationManager.createConversation('New Chat');
@@ -535,8 +587,9 @@ const ChatInterface = ({ messages = [], onSendMessage, isLoading = false, conver
     <div className="app">
       <div className="chat-wrapper">
         {/* Sidebar */}
-        <div className="sidebar">
-          <div style={{marginBottom: '30px'}}>
+        <div className="sidebar" style={{display: 'flex', flexDirection: 'column', height: '100%'}}>
+          {/* Header Section */}
+          <div className="sidebar-header" style={{flexShrink: 0, marginBottom: '20px'}}>
             <h2 style={{marginBottom: '15px'}}>Conversations</h2>
             <button 
               onClick={handleNewMainChat}
@@ -547,9 +600,18 @@ const ChatInterface = ({ messages = [], onSendMessage, isLoading = false, conver
               + New Chat
             </button>
           </div>
-          
-          {/* Branch Tree */}
-          <div className="branch-tree">
+
+          {/* Conversations Section */}
+          <div className="conversations-section" style={{
+            flexGrow: 1, 
+            overflowY: 'auto',
+            minHeight: 0,
+            marginBottom: '20px',
+            border: '1px solid var(--border)',
+            borderRadius: '6px',
+            padding: '12px',
+            backgroundColor: 'var(--bg-secondary)'
+          }}>
             <div className="branch-section">
               <h3>Your Chats</h3>
               {conversationManager?.conversations?.size > 0 ? (
@@ -682,6 +744,155 @@ const ChatInterface = ({ messages = [], onSendMessage, isLoading = false, conver
               )}
             </div>
           </div>
+
+          {/* Starred Messages Section */}
+          <div className="starred-section" style={{
+            flexShrink: 0, 
+            maxHeight: '250px', 
+            border: '1px solid var(--border)',
+            borderRadius: '6px',
+            padding: '12px',
+            backgroundColor: 'var(--bg-secondary)'
+          }}>
+            <h3 style={{marginBottom: '15px', fontSize: '14px'}}>⭐ Starred Messages</h3>
+            {(() => {
+              const allStarredMessages = conversationManager?.getStarredMessages() || [];
+              const starredMessages = filterStarredMessages(allStarredMessages, debouncedSearchQuery);
+              
+              if (allStarredMessages.length === 0) {
+                return (
+                  <p style={{color: 'var(--text-secondary)', fontSize: '12px', fontStyle: 'italic', textAlign: 'center'}}>
+                    Star assistant responses to save them here
+                  </p>
+                );
+              }
+              
+              return (
+                <div>
+                  {/* Search Input */}
+                  <div style={{marginBottom: '12px', position: 'relative'}}>
+                    <input
+                      type="text"
+                      value={starredSearchQuery}
+                      onChange={handleSearchInputChange}
+                      placeholder="Search starred messages..."
+                      style={{
+                        width: '100%',
+                        padding: '6px 30px 6px 10px',
+                        fontSize: '12px',
+                        border: '1px solid var(--border)',
+                        borderRadius: '4px',
+                        backgroundColor: 'var(--bg-primary)',
+                        color: 'var(--text-primary)',
+                        outline: 'none'
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Escape') {
+                          clearSearch();
+                        }
+                      }}
+                    />
+                    {starredSearchQuery && (
+                      <button
+                        onClick={clearSearch}
+                        style={{
+                          position: 'absolute',
+                          right: '6px',
+                          top: '50%',
+                          transform: 'translateY(-50%)',
+                          background: 'none',
+                          border: 'none',
+                          color: 'var(--text-secondary)',
+                          cursor: 'pointer',
+                          fontSize: '14px',
+                          padding: '2px',
+                          opacity: 0.7
+                        }}
+                        title="Clear search"
+                      >
+                        ×
+                      </button>
+                    )}
+                  </div>
+                  
+                  {starredMessages.length > 0 ? (
+                    <div style={{maxHeight: '150px', overflowY: 'auto'}}>
+                      {starredMessages.slice(0, 10).map(message => (
+                        <div 
+                          key={`${message.conversationId}_${message.branchId}_${message.id}`}
+                          className="starred-message-item"
+                          style={{
+                            fontSize: '11px',
+                            padding: '6px',
+                            marginBottom: '6px',
+                            backgroundColor: 'var(--bg-primary)',
+                            border: '1px solid var(--border)',
+                            borderRadius: '4px',
+                            cursor: 'pointer'
+                          }}
+                          onClick={() => {
+                            // Navigate to the starred message
+                            conversationManager.currentConversationId = message.conversationId;
+                            conversationManager.currentBranch = message.branchId;
+                            const currentBranch = conversationManager.getCurrentBranch();
+                            onMessagesUpdate(currentBranch?.messages || []);
+                          }}
+                          title="Click to navigate to this message"
+                        >
+                          <div style={{fontWeight: 'bold', color: 'var(--text-primary)', marginBottom: '3px'}}>
+                            {message.conversationTitle} › {message.branchTitle}
+                          </div>
+                          <div style={{color: 'var(--text-secondary)', lineHeight: '1.3'}}>
+                            {message.content.length > 80 
+                              ? message.content.substring(0, 80) + '...' 
+                              : message.content
+                            }
+                          </div>
+                          <div style={{fontSize: '9px', color: 'var(--text-muted)', marginTop: '3px'}}>
+                            {new Date(message.timestamp).toLocaleDateString()}
+                          </div>
+                        </div>
+                      ))}
+                      {starredMessages.length > 10 && (
+                        <div style={{fontSize: '10px', color: 'var(--text-secondary)', textAlign: 'center', padding: '6px'}}>
+                          Showing 10 of {starredMessages.length} 
+                          {debouncedSearchQuery ? ` matching "${debouncedSearchQuery}"` : ` starred messages`}
+                          {debouncedSearchQuery && allStarredMessages.length !== starredMessages.length && 
+                            ` (${allStarredMessages.length} total)`
+                          }
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div style={{color: 'var(--text-secondary)', fontSize: '11px', fontStyle: 'italic', textAlign: 'center', padding: '15px 0'}}>
+                      {debouncedSearchQuery ? (
+                        <div>
+                          <div>No starred messages found matching "{debouncedSearchQuery}"</div>
+                          <button 
+                            onClick={clearSearch}
+                            style={{
+                              marginTop: '6px',
+                              background: 'none',
+                              border: '1px solid var(--border)',
+                              color: 'var(--text-primary)',
+                              padding: '3px 6px',
+                              fontSize: '10px',
+                              borderRadius: '3px',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            Clear search
+                          </button>
+                        </div>
+                      ) : (
+                        'Star assistant responses to save them here'
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+          </div>
         </div>
 
         {/* Chat Container */}
@@ -724,25 +935,44 @@ const ChatInterface = ({ messages = [], onSendMessage, isLoading = false, conver
                     ) : (
                       message.content
                     )}
-                    {/* Branch buttons inside assistant message content - only show in main branch */}
-                    {message.sender === 'assistant' && conversationManager?.currentBranch === 'main' && (
+                    {/* Star button for all assistant messages */}
+                    {message.sender === 'assistant' && (
                       <div style={{marginTop: '12px', display: 'flex', gap: '8px', justifyContent: 'flex-start'}}>
                         <button 
                           className="branch-btn"
-                          onClick={() => handleBranch(message.id)}
-                          title="Create a new branch from this message"
+                          onClick={() => handleStarToggle(message.id)}
+                          title={message.starred ? "Remove from favorites" : "Add to favorites"}
+                          style={{
+                            backgroundColor: message.starred ? '#ffd700' : 'transparent',
+                            color: message.starred ? '#333' : 'var(--text-primary)',
+                            border: `1px solid ${message.starred ? '#ffd700' : 'var(--border)'}`,
+                            fontSize: '12px',
+                            padding: '6px 10px'
+                          }}
                         >
-                          🌿 Branch from full response
+                          {message.starred ? '⭐ Starred' : '☆ Star'}
                         </button>
-                        {selectedText && selectedMessageId === message.id && (
-                          <button 
-                            className="branch-btn"
-                            onClick={handleTextBranch}
-                            title="Create a new branch from selected text"
-                            style={{backgroundColor: 'var(--accent)', color: 'white'}}
-                          >
-                            🌿 Branch from selection
-                          </button>
+                        {/* Branch buttons - only show in main branch */}
+                        {conversationManager?.currentBranch === 'main' && (
+                          <>
+                            <button 
+                              className="branch-btn"
+                              onClick={() => handleBranch(message.id)}
+                              title="Create a new branch from this message"
+                            >
+                              🌿 Branch from full response
+                            </button>
+                            {selectedText && selectedMessageId === message.id && (
+                              <button 
+                                className="branch-btn"
+                                onClick={handleTextBranch}
+                                title="Create a new branch from selected text"
+                                style={{backgroundColor: 'var(--accent)', color: 'white'}}
+                              >
+                                🌿 Branch from selection
+                              </button>
+                            )}
+                          </>
                         )}
                       </div>
                     )}

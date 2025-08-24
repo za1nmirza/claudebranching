@@ -159,6 +159,45 @@ body {
     background: var(--hover);
 }
 
+/* ReactMarkdown list styling for assistant messages */
+.message.assistant .message-content ul,
+.message.assistant .message-content ol {
+    margin: 12px 0;
+    padding-left: 24px;
+}
+
+.message.assistant .message-content li {
+    margin: 8px 0;
+    line-height: 1.6;
+}
+
+.message.assistant .message-content ul li {
+    list-style-type: disc;
+}
+
+.message.assistant .message-content ol li {
+    list-style-type: decimal;
+}
+
+/* Add spacing between paragraphs in assistant messages */
+.message.assistant .message-content p {
+    margin: 8px 0;
+}
+
+.message.assistant .message-content p:first-child {
+    margin-top: 0;
+}
+
+.message.assistant .message-content p:last-child {
+    margin-bottom: 0;
+}
+
+/* Strong text styling */
+.message.assistant .message-content strong {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
 .branch-btn {
     background: var(--bg-tertiary);
     border: 1px solid var(--border);
@@ -397,8 +436,6 @@ button {
 /* Visual indication that assistant messages are selectable */
 .message.assistant:hover .message-content {
     background-color: rgba(0, 123, 255, 0.02);
-    border-radius: 8px;
-    transition: background-color 0.2s ease;
 }
 
 /* Branch button styles */
@@ -436,4 +473,43 @@ button {
 
 .branch-item.swipeable:active {
     background: var(--hover);
+}
+
+/* ReactMarkdown list styling for assistant messages */
+.message.assistant .message-content ul,
+.message.assistant .message-content ol {
+    margin: 12px 0;
+    padding-left: 24px;
+}
+
+.message.assistant .message-content li {
+    margin: 8px 0;
+    line-height: 1.6;
+}
+
+.message.assistant .message-content ul li {
+    list-style-type: disc;
+}
+
+.message.assistant .message-content ol li {
+    list-style-type: decimal;
+}
+
+/* Add spacing between paragraphs in assistant messages */
+.message.assistant .message-content p {
+    margin: 8px 0;
+}
+
+.message.assistant .message-content p:first-child {
+    margin-top: 0;
+}
+
+.message.assistant .message-content p:last-child {
+    margin-bottom: 0;
+}
+
+/* Strong text styling */
+.message.assistant .message-content strong {
+    font-weight: 600;
+    color: var(--text-primary);
 }
