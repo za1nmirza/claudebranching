@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const axios = require('axios');
+const crypto = require('crypto');
 require('dotenv').config();
 
 const app = express();
@@ -180,6 +181,12 @@ function getDefaultBranchName() {
   return defaultNames[Math.floor(Math.random() * defaultNames.length)];
 }
 
+// Generate stable ID from title + sourceMessageId
+function generateStableId(title, sourceMessageId) {
+  const content = `${title}_${sourceMessageId}`;
+  return crypto.createHash('md5').update(content).digest('hex').substring(0, 12);
+}
+
 // Conversation name generation endpoint
 app.post('/api/generate-conversation-name', async (req, res) => {
   try {
@@ -234,6 +241,139 @@ Respond with only the conversation title, no additional text.`;
       conversationName: 'New Conversation',
       success: false,
       error: 'Used fallback name due to API error'
+    });
+  }
+});
+
+// Chat condensing endpoint - generates summary outline of conversation
+app.post('/api/condense', async (req, res) => {
+  try {
+    const { messages } = req.body;
+
+    if (!messages || !Array.isArray(messages)) {
+      return res.status(400).json({ error: 'Messages array is required' });
+    }
+
+    if (messages.length === 0) {
+      return res.json({ condensed: [], success: true });
+    }
+
+    console.log('Generating condensed outline for', messages.length, 'messages');
+
+    const systemPrompt = `You condense a chat into a clickable outline.
+Return JSON ONLY in the schema:
+[
+  {"id":"unique_id_here",
+   "title":"<one-line topic in plain English>",
+   "sourceMessageId":"<messageId from input>",
+   "children":[ ...optional same shape... ]
+  }
+]
+
+Rules:
+- Each item = 5–11 words, past-tense, user-centric (e.g., "Asked about gravity's discovery date").
+- Map each item to the MOST representative messageId (usually the user's question or the assistant answer starting that topic).
+- Group immediate follow-ups as children. Keep 1-level nesting max.
+- Use unique IDs for each summary item (e.g., "summary_1", "summary_2", etc.).
+- Do not include any prose outside the JSON array.
+- If there are fewer than 3 messages, create a single summary item.`;
+
+    const userContent = messages.map(m => `[${m.sender.toUpperCase()} ${m.id}]\n${m.content}`).join('\n\n');
+
+    const response = await axios.post(CLAUDE_API_URL, {
+      model: 'claude-3-haiku-20240307',
+      max_tokens: 1200,
+      system: systemPrompt,
+      messages: [{ role: 'user', content: userContent }]
+    }, {
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': CLAUDE_API_KEY,
+        'anthropic-version': '2023-06-01'
+      }
+    });
+
+    const text = response.data.content[0].text.trim();
+    
+    // Create message lookup for timestamps
+    const messageMap = new Map();
+    messages.forEach(msg => {
+      messageMap.set(msg.id, msg);
+    });
+
+    // Safe parse with fallback
+    let condensed = [];
+    let parseError = false;
+    
+    try {
+      // Try to extract JSON from the response
+      const jsonMatch = text.match(/\[[\s\S]*\]/);
+      const jsonText = jsonMatch ? jsonMatch[0] : text;
+      condensed = JSON.parse(jsonText);
+      
+      // Validate structure
+      if (!Array.isArray(condensed)) {
+        throw new Error('Response is not an array');
+      }
+      
+      // Process items and add timestamps, stable IDs
+      const processItem = (item, index) => {
+        const sourceMsg = messageMap.get(item.sourceMessageId);
+        const stableId = item.id || generateStableId(item.title || `item_${index}`, item.sourceMessageId || 'unknown');
+        
+        return {
+          id: stableId,
+          title: item.title || 'Untitled Topic',
+          sourceMessageId: item.sourceMessageId || (messages[0] && messages[0].id) || 'unknown',
+          timestamp: sourceMsg?.timestamp || null,
+          children: (item.children || []).map((child, childIndex) => {
+            const childSourceMsg = messageMap.get(child.sourceMessageId);
+            const childStableId = child.id || generateStableId(child.title || `child_${childIndex}`, child.sourceMessageId || 'unknown');
+            
+            return {
+              id: childStableId,
+              title: child.title || 'Untitled Topic',
+              sourceMessageId: child.sourceMessageId || (messages[0] && messages[0].id) || 'unknown',
+              timestamp: childSourceMsg?.timestamp || null,
+              children: []
+            };
+          })
+        };
+      };
+      
+      condensed = condensed.map(processItem);
+      
+    } catch (error) {
+      console.error('Failed to parse condensed response:', error);
+      console.error('Raw response:', text);
+      parseError = true;
+      
+      // Create a fallback summary
+      condensed = [{
+        id: generateStableId('Conversation Summary', messages[0]?.id || 'fallback'),
+        title: 'Conversation Summary',
+        sourceMessageId: messages[0] ? messages[0].id : 'unknown',
+        timestamp: messages[0]?.timestamp || null,
+        children: []
+      }];
+    }
+
+    console.log('Generated condensed outline with', condensed.length, 'items');
+
+    res.json({ 
+      condensed: condensed,
+      success: true,
+      parseError: parseError,
+      errorMessage: parseError ? 'AI response parsing failed - using fallback summary' : null
+    });
+
+  } catch (error) {
+    console.error('Condensing error:', error.response?.data || error.message);
+    
+    res.status(500).json({ 
+      error: 'Failed to generate condensed outline',
+      details: error.response?.data || error.message,
+      success: false
     });
   }
 });

@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import ReactMarkdown from 'react-markdown';
+import { useHotkeys } from 'react-hotkeys-hook';
+import CondensedLog from './CondensedLog';
 
 // Helper function to convert HTML to markdown while preserving formatting
 const convertHTMLToMarkdown = (html, fallbackText) => {
@@ -130,6 +132,11 @@ const ChatInterface = ({ messages = [], onSendMessage, isLoading = false, conver
   const [isMouseDragging, setIsMouseDragging] = useState(false);
   const [starredSearchQuery, setStarredSearchQuery] = useState('');
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+  const [condensedLogOpen, setCondensedLogOpen] = useState(false);
+  const [condensedItems, setCondensedItems] = useState([]);
+  const [condensedLoading, setCondensedLoading] = useState(false);
+  const [condensedParseError, setCondensedParseError] = useState(false);
+  const [condensedErrorMessage, setCondensedErrorMessage] = useState(null);
 
   // Debounce the search query for performance
   useEffect(() => {
@@ -163,6 +170,117 @@ const ChatInterface = ({ messages = [], onSendMessage, isLoading = false, conver
     setStarredSearchQuery('');
     setDebouncedSearchQuery('');
   };
+
+  // Load condensed log (with smart caching)
+  const loadCondensedLog = async (forceRefresh = false) => {
+    if (!conversationManager || condensedLoading) return;
+    
+    setCondensedLoading(true);
+    try {
+      const result = await conversationManager.getCondensedLog(forceRefresh);
+      setCondensedItems(result.items);
+      setCondensedParseError(result.parseError);
+      setCondensedErrorMessage(result.errorMessage);
+    } catch (error) {
+      console.error('Failed to load condensed log:', error);
+      setCondensedItems([]);
+      setCondensedParseError(true);
+      setCondensedErrorMessage('Failed to load condensed log');
+    } finally {
+      setCondensedLoading(false);
+    }
+  };
+
+  // Handle condensed log toggle
+  const handleCondensedLogToggle = async () => {
+    if (!condensedLogOpen) {
+      // Load existing summaries (or generate if needed)
+      await loadCondensedLog(false);
+    }
+    setCondensedLogOpen(!condensedLogOpen);
+  };
+
+  // Handle manual refresh of condensed log
+  const handleCondensedLogRefresh = async () => {
+    await loadCondensedLog(true);
+  };
+
+  // Handle jumping to a message from condensed log
+  const handleJumpToMessage = (messageId) => {
+    // First, switch to the branch containing the message
+    const success = conversationManager.switchToBranchContainingMessage(messageId);
+    
+    if (success) {
+      // Update the current messages
+      const currentBranch = conversationManager.getCurrentBranch();
+      if (currentBranch) {
+        onMessagesUpdate([...currentBranch.messages]);
+      }
+      
+      // Wait a moment for the DOM to update, then scroll to the message
+      setTimeout(() => {
+        const messageElement = document.querySelector(`[data-message-id="${messageId}"]`);
+        if (messageElement) {
+          messageElement.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'center' 
+          });
+          
+          // Add highlight class
+          messageElement.classList.add('message-highlight');
+          
+          // Remove highlight after animation
+          setTimeout(() => {
+            messageElement.classList.remove('message-highlight');
+          }, 2000);
+        }
+      }, 100);
+    }
+  };
+
+  // Keyboard shortcuts
+  useHotkeys('meta+j', async (e) => {
+    e.preventDefault();
+    await handleCondensedLogToggle();
+  }, [condensedLogOpen, condensedLoading, conversationManager]);
+
+  // Horizontal swipe detection for trackpads
+  useEffect(() => {
+    let accumulatedDelta = 0;
+    
+    const handleWheel = (e) => {
+      // Detect strong horizontal swipe (negative deltaX = swipe right)
+      if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
+        accumulatedDelta += -e.deltaX;
+        
+        // Threshold for opening condensed log
+        if (accumulatedDelta > 600 && !condensedLogOpen) {
+          handleCondensedLogToggle();
+          accumulatedDelta = 0;
+        }
+      } else {
+        accumulatedDelta = 0;
+      }
+    };
+
+    const chatContainer = document.querySelector('.chat-container');
+    if (chatContainer) {
+      chatContainer.addEventListener('wheel', handleWheel, { passive: true });
+      return () => chatContainer.removeEventListener('wheel', handleWheel);
+    }
+  }, [condensedLogOpen, conversationManager]);
+
+  // Auto-refresh condensed log when messages change (if it's open)
+  useEffect(() => {
+    if (condensedLogOpen && messages.length > 0) {
+      // Refresh condensed log when new messages are added
+      const timeoutId = setTimeout(() => {
+        loadCondensedLog(false); // Use smart refresh (only if needed)
+      }, 1000); // Delay to batch multiple rapid changes
+      
+      return () => clearTimeout(timeoutId);
+    }
+  }, [messages, condensedLogOpen]);
 
   const handleSendMessage = (e) => {
     e.preventDefault();
@@ -1014,6 +1132,18 @@ const ChatInterface = ({ messages = [], onSendMessage, isLoading = false, conver
           </div>
         </div>
       </div>
+
+      {/* Condensed Log Overlay */}
+      <CondensedLog
+        open={condensedLogOpen}
+        onClose={() => setCondensedLogOpen(false)}
+        onJumpTo={handleJumpToMessage}
+        onRefresh={handleCondensedLogRefresh}
+        condensedItems={condensedItems}
+        isLoading={condensedLoading}
+        parseError={condensedParseError}
+        errorMessage={condensedErrorMessage}
+      />
 
     </div>
   );

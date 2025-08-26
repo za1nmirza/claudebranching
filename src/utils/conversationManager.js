@@ -39,7 +39,10 @@ export class ConversationManager {
         createdAt: new Date(),
         branches: new Map(),
         currentBranch: 'main',
-        breadcrumbs: ['Main Channel']
+        breadcrumbs: ['Main Channel'],
+        condensedItems: [],
+        lastSummarizedMessageId: null,
+        condensedLastUpdated: null
       };
 
       // Create main branch
@@ -327,7 +330,15 @@ export class ConversationManager {
       this.currentBranch = parsed.currentBranch || 'main';
       
       // Add backward compatibility for existing messages without starred property
+      // and conversations without condensed items
       for (const [, conversation] of this.conversations) {
+        // Add condensed items support to existing conversations
+        if (conversation.condensedItems === undefined) {
+          conversation.condensedItems = [];
+          conversation.lastSummarizedMessageId = null;
+          conversation.condensedLastUpdated = null;
+        }
+        
         for (const [, branch] of conversation.branches) {
           branch.messages.forEach(message => {
             if (message.starred === undefined) {
@@ -448,6 +459,206 @@ export class ConversationManager {
     } catch (error) {
       logError(error, { operation: 'getStarredMessages' });
       return [];
+    }
+  }
+
+  /**
+   * Gets messages from current conversation for condensing
+   * Handles branched conversations by collecting messages chronologically
+   */
+  getMessagesForCondensing() {
+    try {
+      const conversation = this.getCurrentConversation();
+      if (!conversation) {
+        return [];
+      }
+
+      // Collect all messages from all branches with metadata
+      const allMessages = [];
+      
+      for (const [branchId, branch] of conversation.branches) {
+        branch.messages.forEach(message => {
+          allMessages.push({
+            ...message,
+            branchId,
+            branchTitle: branch.title
+          });
+        });
+      }
+
+      // Sort by timestamp to maintain chronological order
+      return allMessages.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+      
+    } catch (error) {
+      logError(error, { operation: 'getMessagesForCondensing' });
+      return [];
+    }
+  }
+
+  /**
+   * Gets existing condensed log or generates new one if needed
+   */
+  async getCondensedLog(forceRefresh = false) {
+    try {
+      const conversation = this.getCurrentConversation();
+      if (!conversation) {
+        return [];
+      }
+
+      const messages = this.getMessagesForCondensing();
+      
+      if (messages.length === 0) {
+        return [];
+      }
+
+      // Check if we need to regenerate
+      const needsRegeneration = forceRefresh || 
+        !conversation.condensedItems || 
+        conversation.condensedItems.length === 0 ||
+        this._hasNewMessagesSinceLastSummary(messages, conversation.lastSummarizedMessageId);
+
+      if (!needsRegeneration) {
+        // Return existing condensed items
+        return {
+          items: conversation.condensedItems || [],
+          parseError: conversation.condensedParseError || false,
+          errorMessage: conversation.condensedErrorMessage || null
+        };
+      }
+
+      // Generate new condensed log
+      const result = await this._generateCondensedLogFromAPI(messages);
+      
+      // Store in conversation
+      conversation.condensedItems = result.items;
+      conversation.condensedParseError = result.parseError;
+      conversation.condensedErrorMessage = result.errorMessage;
+      conversation.lastSummarizedMessageId = messages[messages.length - 1]?.id || null;
+      conversation.condensedLastUpdated = new Date().toISOString();
+      
+      // Save to storage
+      this._saveToStorage();
+      
+      return result;
+      
+    } catch (error) {
+      logError(error, { operation: 'getCondensedLog' });
+      return {
+        items: [],
+        parseError: true,
+        errorMessage: 'Failed to load condensed log'
+      };
+    }
+  }
+
+  /**
+   * Private method to generate condensed log from API
+   */
+  async _generateCondensedLogFromAPI(messages) {
+    try {
+      const response = await fetch('http://localhost:3001/api/condense', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ messages })
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        return {
+          items: data.condensed || [],
+          parseError: data.parseError || false,
+          errorMessage: data.errorMessage || null
+        };
+      } else {
+        throw new Error(data.error || 'Failed to generate condensed log');
+      }
+      
+    } catch (error) {
+      logError(error, { operation: '_generateCondensedLogFromAPI' });
+      return {
+        items: [],
+        parseError: true,
+        errorMessage: 'Network error: Unable to connect to server'
+      };
+    }
+  }
+
+  /**
+   * Check if there are new messages since last summary
+   */
+  _hasNewMessagesSinceLastSummary(messages, lastSummarizedMessageId) {
+    if (!lastSummarizedMessageId || messages.length === 0) {
+      return true; // No previous summary or no messages
+    }
+
+    // Find the index of the last summarized message
+    const lastSummarizedIndex = messages.findIndex(msg => msg.id === lastSummarizedMessageId);
+    
+    // If we can't find the last summarized message or there are messages after it
+    return lastSummarizedIndex === -1 || lastSummarizedIndex < messages.length - 1;
+  }
+
+  /**
+   * Force refresh of condensed log
+   */
+  async refreshCondensedLog() {
+    return await this.getCondensedLog(true);
+  }
+
+  /**
+   * @deprecated Use getCondensedLog() instead
+   */
+  async generateCondensedLog() {
+    return await this.getCondensedLog();
+  }
+
+  /**
+   * Finds a message by ID across all branches in current conversation
+   */
+  findMessageById(messageId) {
+    try {
+      const conversation = this.getCurrentConversation();
+      if (!conversation) {
+        return null;
+      }
+
+      for (const [branchId, branch] of conversation.branches) {
+        const message = branch.messages.find(msg => msg.id === messageId);
+        if (message) {
+          return {
+            message,
+            branchId,
+            branchTitle: branch.title
+          };
+        }
+      }
+
+      return null;
+      
+    } catch (error) {
+      logError(error, { operation: 'findMessageById', messageId });
+      return null;
+    }
+  }
+
+  /**
+   * Switches to the branch containing a specific message
+   */
+  switchToBranchContainingMessage(messageId) {
+    try {
+      const result = this.findMessageById(messageId);
+      if (result) {
+        this.switchToBranch(result.branchId);
+        return true;
+      }
+      return false;
+      
+    } catch (error) {
+      logError(error, { operation: 'switchToBranchContainingMessage', messageId });
+      return false;
     }
   }
 }
